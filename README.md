@@ -29,6 +29,7 @@ class Malli(models.Model):
       ).values(...),
       output_field=...
     ),
+    laske=lambda self: self.toisen_mallin_kohteita_yhteensa(),
     automaattinen=True,
   )
   ...
@@ -38,3 +39,5 @@ Automaattisiksi määritetyt näennäiskentät lisätään kaikkiin kyselyihin. 
 ```python
 qs = Malli.objects.filter(...).lume('kentta2', 'kentta3')
 ```
+
+Ei-automaattinen näennäiskenttä, jota ei ole lisätty em. mukaisesti kyselyyn, lasketaan kullekin riville erikseen `laske`-parametrin avulla määritetyn funktion mukaisesti.

@@ -19,9 +19,10 @@ from django.db import models
 
 class Lumekentta:
 
-  def __init__(self, kysely, automaattinen=True):
+  def __init__(self, kysely, laske=None, automaattinen=True):
     super().__init__()
     self.kysely = kysely
+    self.laske = laske
     self.automaattinen = automaattinen
     # def __init__
 

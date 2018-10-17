@@ -36,6 +36,9 @@ def get_queryset(self):
     qs.model, lambda k: isinstance(k, Lumekentta) and k.automaattinen
   ):
     qs = qs.annotate(**{
+      #nimi + '_id' if isinstance(
+      #  lumekentta.kysely.output_field, models.ForeignKey
+      #) else nimi: lumekentta.kysely
       nimi: lumekentta.kysely
     })
     # for nimi, lumekentta
@@ -56,5 +59,30 @@ def lume(self, *fields):
     and not getattr(self.model, nimi).automaattinen
   })
   # def lume
-
 models.QuerySet.lume = lume
+
+
+vanha_iter = models.query.ModelIterable.__iter__
+@wraps(vanha_iter)
+def __iter__(self):
+  laske = []
+  poista = []
+  for nimi, lumekentta in inspect.getmembers(
+    self.queryset.model, lambda k: isinstance(k, Lumekentta)
+  ):
+    if lumekentta.laske:
+      laske += [(nimi, lumekentta.laske)]
+    else:
+      poista += [nimi]
+    # nimi, lumekentta
+  for rivi in vanha_iter(self):
+    for nimi, laske_funktio in laske:
+      if isinstance(getattr(rivi, nimi), Lumekentta):
+        setattr(rivi, nimi, laske_funktio(rivi))
+    for nimi in poista:
+      if isinstance(getattr(rivi, nimi), Lumekentta):
+        delattr(rivi, nimi)
+    yield rivi
+    # for rivi
+  # def __iter__
+models.query.ModelIterable.__iter__ = __iter__
