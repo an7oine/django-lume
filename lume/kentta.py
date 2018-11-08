@@ -14,14 +14,16 @@
 # @copyright   Copyright (c) Pispalan Insinööritoimisto Oy
 # @license     All rights reserved
 #============================================================================
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, useless-object-inheritance
+
+from __future__ import unicode_literals
 
 from django.db import models
 from django.db.models.base import DEFERRED
 from django.utils.functional import cached_property
 
 
-class Lumesaate:
+class Lumesaate(object):
   # pylint: disable=no-member
 
   def __init__(self, *args, **kwargs):
@@ -33,7 +35,7 @@ class Lumesaate:
     kwargs.update({
       'null': True,
     })
-    super().__init__(*args, **kwargs)
+    super(Lumesaate, self).__init__(*args, **kwargs)
     self._kysely = kysely
     self._laske = laske
     self._aseta = aseta
@@ -42,11 +44,11 @@ class Lumesaate:
     # def __init__
 
   def deconstruct(self):
-    name, path, args, kwargs = super().deconstruct()
-    return name, path, args, {
-      **kwargs,
-      'kysely': self.kysely,
-    }
+    name, path, args, kwargs = super(Lumesaate, self).deconstruct()
+    return name, path, args, dict(
+      kysely=self.kysely,
+      **kwargs
+    )
     # def deconstruct
 
   @cached_property

@@ -16,6 +16,8 @@
 #============================================================================
 # pylint: disable=invalid-name, protected-access, unused-argument
 
+from __future__ import unicode_literals
+
 import functools
 
 from django.db import models
