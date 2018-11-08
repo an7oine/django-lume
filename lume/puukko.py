@@ -20,8 +20,9 @@ from __future__ import unicode_literals
 
 import functools
 
-from django.db import models
 from django.db.migrations import autodetector
+from django.db import models
+from django.db.models.sql import compiler
 from django.utils.functional import cached_property
 
 # pylint: disable=import-error
@@ -103,6 +104,7 @@ def as_sql(oletus, self, compiler, connection):
   '''
   Pyydä lumekenttää vastaavan sarakkeen SQL-kysely kentältä itseltään.
   '''
+  # pylint: disable=redefined-outer-name
   if isinstance(self.target, Lumesaate):
     return self.target.select_format(compiler, None, None)
   else:
@@ -121,3 +123,25 @@ def local_concrete_fields(oletus, self):
     )
   )
   # def local_concrete_fields
+
+
+@puukota(compiler.SQLCompiler)
+def get_converters(oletus, self, expressions):
+  '''
+  Korjaa SQL-kääntäjän käyttämät kenttätyyppi- ja tietokantatoteutuskohtaiset
+  muuntimet siten, että
+  {DEFERRED}-arvot palautetaan sellaisenaan (ei yritetä muuntaa niitä).
+  '''
+  def korjaa_muunnin(muunnin):
+    @functools.wraps(muunnin)
+    def korjattu_muunnin(value, *args, **kwargs):
+      if value == str(models.base.DEFERRED):
+        return value
+      else:
+        return muunnin(value, *args, **kwargs)
+    return korjattu_muunnin
+  return {
+    i: (list(map(korjaa_muunnin, convs)), expression)
+    for i, (convs, expression) in oletus(self, expressions).items()
+  }
+  # def get_converters
