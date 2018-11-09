@@ -106,7 +106,7 @@ def as_sql(oletus, self, compiler, connection):
   '''
   # pylint: disable=redefined-outer-name
   if isinstance(self.target, Lumesaate):
-    return self.target.select_format(compiler, None, None)
+    return self.target.sql_select(compiler, None, None)
   else:
     return oletus(self, compiler, connection)
   # def as_sql

@@ -187,9 +187,11 @@ class Lumesaate(object):
     return Lookup(field.get_col(alias), self.kysely)
     # def get_extra_restriction
 
-  def select_format(self, compiler, sql, params):
-    ''' Palauta SELECT-lauseke '''
-    # pylint: disable=unused-argument
+  def sql_select(self, compiler, sql, params):
+    '''
+    Palauta SELECT-lauseke.
+    Tätä kutsutaan `Col.as_sql`-metodista (ks. `puukko.py`).
+    '''
     if self.lataa_kannasta(compiler.query):
       return self.kysely.resolve_expression(
         query=compiler.query
@@ -199,6 +201,6 @@ class Lumesaate(object):
     else:
       # Palautetaan kysely, joka tunnistetaan ohitetuksi arvoksi.
       return '%s', [DEFERRED]
-    # def select_format
+    # def sql_select
 
   # class Lumesaate
