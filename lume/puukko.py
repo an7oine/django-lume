@@ -23,6 +23,7 @@ import functools
 from django.db.migrations import autodetector
 from django.db import models
 from django.db.models.sql import compiler
+from django.db.models.options import Options
 from django.utils.functional import cached_property
 
 # pylint: disable=import-error
@@ -71,6 +72,21 @@ def _prepare_field_lists(oletus, self):
   # def _prepare_field_lists
 
 
+#@puukota(Options, koriste=cached_property)
+def local_concrete_fields(self):
+  '''
+  Ohita lumekentät mallin konkreettisia kenttiä kysyttäessä.
+  '''
+  return models.options.make_immutable_fields_list(
+    "concrete_fields", (
+      f for f in self.local_fields
+      if f.concrete and not isinstance(f, Lumesaate)
+    )
+  )
+  # def local_concrete_fields
+Options.local_concrete_fields = cached_property(local_concrete_fields)
+
+
 @puukota(models.query.QuerySet, kopioi='only')
 def lume(only, self, *fields):
   '''
@@ -106,23 +122,10 @@ def as_sql(oletus, self, compiler, connection):
   '''
   # pylint: disable=redefined-outer-name
   if isinstance(self.target, Lumesaate):
-    return self.target.sql_select(compiler, None, None)
+    return self.target.sql_select(compiler)
   else:
     return oletus(self, compiler, connection)
   # def as_sql
-
-
-@puukota(models.options.Options, koriste=cached_property)
-def local_concrete_fields(oletus, self):
-  '''
-  Ohita lumekentät mallin konkreettisia kenttiä kysyttäessä.
-  '''
-  return models.options.make_immutable_fields_list(
-    "concrete_fields", (
-      f for f in self.fields if f.concrete and not isinstance(f, Lumesaate)
-    )
-  )
-  # def local_concrete_fields
 
 
 @puukota(compiler.SQLCompiler)

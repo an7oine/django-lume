@@ -187,7 +187,7 @@ class Lumesaate(object):
     return Lookup(field.get_col(alias), self.kysely)
     # def get_extra_restriction
 
-  def sql_select(self, compiler, sql, params):
+  def sql_select(self, compiler):
     '''
     Palauta SELECT-lauseke.
     Tätä kutsutaan `Col.as_sql`-metodista (ks. `puukko.py`).
