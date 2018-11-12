@@ -26,20 +26,35 @@ class Lumesaate(object):
   # pylint: disable=no-member
 
   def __init__(self, *args, **kwargs):
+    '''
+    Alustaa lumekentän.
+    Args:
+      kysely (`django.db.models.Expression` / `lambda`): kysely (pakollinen)
+      laske (`lambda self`): paikallinen laskentafunktio
+      aseta (`lambda *args`): paikallinen arvon asetusfunktio
+      automaattinen (`bool`): lisätäänkö kenttä automaattisesti kyselyyn?
+    '''
     kysely = kwargs.pop('kysely', None)
     laske = kwargs.pop('laske', None)
     aseta = kwargs.pop('aseta', None)
     automaattinen = kwargs.pop('automaattinen', False)
+
+    # `kysely` on pakollinen.
     assert kysely
-    kwargs.update({
-      'null': True,
-    })
+
+    # Lisää super-kutsuun parametri `editable=False`,
+    # jos `aseta`-funktiota ei ole määritetty.
+    if not aseta:
+      kwargs['editable'] = False
+
     super(Lumesaate, self).__init__(*args, **kwargs)
     self._kysely = kysely
     self._laske = laske
     self._aseta = aseta
     self.automaattinen = automaattinen
-    self.column = None # ei käytetä tietokantataulun saraketta
+
+    # Ei käytetä todellista tietokantasaraketta.
+    self.column = None
     # def __init__
 
   def deconstruct(self):
@@ -105,19 +120,19 @@ class Lumesaate(object):
         # def __get__
       def __set__(self, instance, value):
         '''
-        Jos kannasta haettua kentän arvoa muutetaan myöhemmin,
+        Jos kentän arvo asetetaan suoraan kutsuvasta koodista,
         kutsutaan `aseta_paikallisesti`-metodia.
         '''
         if instance is None:
           return
         data = instance.__dict__
         if data.get(self.field_name, self) is not self:
-          # Jos kentän arvo on asetettu jo aiemmin
+          # Jos kentän arvo on asetettu jo aiemmin,
           # kutsu kenttäkohtaisesti määritettyä `aseta`-funktiota.
           kentta.aseta_paikallisesti(instance, value)
-        else:
-          # Kun kentän arvo haetaan kannasta, asetetaan normaalisti.
-          data[self.field_name] = value
+        # Kun arvo on asetettu paikallisesti tai haettu kannasta,
+        # lisätään normaalisti datasanakirjaan.
+        data[self.field_name] = value
         # def __set__
       # class Lumeominaisuus
     setattr(cls, self.attname, Lumeominaisuus(self.attname))
