@@ -22,7 +22,6 @@ import functools
 
 from django.db.migrations import autodetector
 from django.db import models
-from django.db.models.sql import compiler
 from django.db.models.options import Options
 from django.utils.functional import cached_property
 
@@ -35,15 +34,14 @@ def puukota(moduuli, koriste=None, kopioi=None):
   '''
   Korvaa moduulissa olevan metodin tai lisää uuden (`kopioi`).
   '''
-  koriste = koriste or (lambda f: f)
   def puukko(funktio):
-    nimi = kopioi or funktio.__name__
-    toteutus = getattr(moduuli, nimi, None)
-    @functools.wraps(toteutus)
-    @koriste
+    toteutus = getattr(moduuli, kopioi or funktio.__name__, None)
     def uusi_toteutus(*args, **kwargs):
       return funktio(toteutus, *args, **kwargs)
-    setattr(moduuli, funktio.__name__, uusi_toteutus)
+    setattr(
+      moduuli, funktio.__name__,
+      (koriste or functools.wraps(toteutus))(uusi_toteutus)
+    )
   return puukko
   # def puukota
 
@@ -72,8 +70,8 @@ def _prepare_field_lists(oletus, self):
   # def _prepare_field_lists
 
 
-#@puukota(Options, koriste=cached_property)
-def local_concrete_fields(self):
+@puukota(Options, koriste=cached_property)
+def local_concrete_fields(oletus, self):
   '''
   Ohita lumekentät mallin konkreettisia kenttiä kysyttäessä.
   '''
@@ -84,7 +82,6 @@ def local_concrete_fields(self):
     )
   )
   # def local_concrete_fields
-Options.local_concrete_fields = cached_property(local_concrete_fields)
 
 
 @puukota(models.query.QuerySet, kopioi='only')
@@ -99,11 +96,9 @@ def lume(only, self, *fields):
     )
   clone = self._chain()
   if fields == (None,):
-    clone.query.pyydetyt_lumekentat = []
+    clone.query.tyhjenna_lumekentat()
   else:
-    clone.query.pyydetyt_lumekentat = getattr(
-      clone.query, 'pyydetyt_lumekentat', []
-    ) + list(fields)
+    clone.query.lisaa_lumekentat(fields)
   return clone
   # def lume
 
@@ -113,6 +108,52 @@ def lume(only, self, *fields):
 def m_lume(self, *args, **kwargs):
   return getattr(self.get_queryset(), 'lume')(*args, **kwargs)
 models.Manager.lume = m_lume
+
+
+@puukota(models.sql.query.Query, kopioi='clear_deferred_loading')
+def tyhjenna_lumekentat(oletus, self):
+  self.pyydetyt_lumekentat = frozenset()
+  # def tyhjenna_lumekentat
+
+
+@puukota(models.sql.query.Query, kopioi='add_deferred_loading')
+def lisaa_lumekentat(oletus, self, kentat):
+  self.pyydetyt_lumekentat = getattr(
+    self, 'pyydetyt_lumekentat', frozenset()
+  ).union(kentat)
+  # def lisaa_lumekentat
+
+
+@puukota(models.sql.query.Query)
+def deferred_to_data(oletus, self, target, callback):
+  '''
+  Lisää pyydetyt tai oletusarvoiset lumekentät kyselyyn
+  ennen lopullisten kenttien määräämistä:
+    1. `qs.only(...)` -> oletustoteutus (nimetyt kentät haetaan)
+    2. `qs.defer(...).lume(...)` -> lisää ne lumekentät, joita ei nimetty,
+    `defer`-luetteloon
+    3. `qs.defer(...)` -> lisää ei-automaattiset lumekentät `defer`-luetteloon
+    4. `qs.lume(...)` -> muodosta `defer`-luettelo ei-nimetyistä lumekentistä
+    5. `qs` -> muodosta `defer`-luettelo ei-automaattisista lumekentistä
+  '''
+  field_names, defer = self.deferred_loading
+  if not defer: # `qs.only()`
+    return oletus(self, target, callback)
+  if hasattr(self, 'pyydetyt_lumekentat'): # `qs.lume()`
+    for kentta in self.get_meta().get_fields():
+      if isinstance(kentta, Lumesaate) \
+      and not kentta.name in self.pyydetyt_lumekentat:
+        field_names = field_names.union((kentta.name,))
+    # if pyydetyt_lumekentat
+  else:
+    for kentta in self.get_meta().get_fields():
+      if isinstance(kentta, Lumesaate) \
+      and not kentta.automaattinen:
+        field_names = field_names.union((kentta.name,))
+    # else
+  self.deferred_loading = field_names, True
+  return oletus(self, target, callback)
+  # def deferred_to_data
 
 
 @puukota(models.expressions.Col)
@@ -126,25 +167,3 @@ def as_sql(oletus, self, compiler, connection):
   else:
     return oletus(self, compiler, connection)
   # def as_sql
-
-
-@puukota(compiler.SQLCompiler)
-def get_converters(oletus, self, expressions):
-  '''
-  Korjaa SQL-kääntäjän käyttämät kenttätyyppi- ja tietokantatoteutuskohtaiset
-  muuntimet siten, että
-  {DEFERRED}-arvot palautetaan sellaisenaan (ei yritetä muuntaa niitä).
-  '''
-  def korjaa_muunnin(muunnin):
-    @functools.wraps(muunnin)
-    def korjattu_muunnin(value, *args, **kwargs):
-      if value == str(models.base.DEFERRED):
-        return value
-      else:
-        return muunnin(value, *args, **kwargs)
-    return korjattu_muunnin
-  return {
-    i: (list(map(korjaa_muunnin, convs)), expression)
-    for i, (convs, expression) in oletus(self, expressions).items()
-  }
-  # def get_converters

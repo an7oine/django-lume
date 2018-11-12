@@ -19,7 +19,6 @@
 from __future__ import unicode_literals
 
 from django.db import models
-from django.db.models.base import DEFERRED
 from django.utils.functional import cached_property
 
 
@@ -81,27 +80,6 @@ class Lumesaate(object):
     return self._aseta(rivi, arvo)
     # def aseta_paikallisesti
 
-  def lataa_kannasta(self, query):
-    '''
-    Ladataanko tämän kentän arvo kyselyn yhteydessä? Vastataan seuraavasti:
-    - kysely kohdistuu muuhun kuin tähän tauluun: ei ladata
-    - `.lume`- tai `.only`-metodia kutsuttu: onko kenttä listalla?
-    - `.defer`-metodia kutsuttu: onko kenttä `automaattinen` eikä listalla?
-    - onko kenttä `automaattinen`?
-    '''
-    if query.model is not self.model:
-      return False
-    kentat, defer = query.deferred_loading
-    pyydetyt_lumekentat = getattr(query, 'pyydetyt_lumekentat', None)
-    if pyydetyt_lumekentat is not None:
-      return self.name in pyydetyt_lumekentat
-    return (
-      not defer and self.name in kentat
-    ) or (
-      self.automaattinen and defer and self.name not in kentat
-    )
-    # def lataa_kannasta
-
   def contribute_to_class(self, cls, *args, **kwargs):
     '''
     Lisätään tietokantamalliin ominaisuuskuvaaja (Descriptor)
@@ -110,10 +88,6 @@ class Lumesaate(object):
     super(Lumesaate, self).contribute_to_class(cls, *args, **kwargs)
     kentta = self
     class Lumeominaisuus(models.query_utils.DeferredAttribute):
-      def __init__(self, field_name):
-        super(Lumeominaisuus, self).__init__(field_name)
-        self.lume_ohitettu_avain = '_lume_ohitettu_' + field_name
-        # def __init__
       def __get__(self, instance, cls=None):
         '''
         Kysyttäessä kenttää, jota ei luettu kannasta,
@@ -126,28 +100,19 @@ class Lumesaate(object):
           val = self._check_parent_chain(instance, self.field_name)
           if val is None:
             val = kentta.laske_paikallisesti(instance)
-            # Poista aiempi merkintä ohitetusta kentästä.
-            del data[self.lume_ohitettu_avain]
           data[self.field_name] = val
         return data[self.field_name]
         # def __get__
       def __set__(self, instance, value):
         '''
-        Ohitetaan {DEFERRED}-arvot kannasta alustettaessa;
-        jos aiempaa kentän arvoa muutetaan,
+        Jos kannasta haettua kentän arvoa muutetaan myöhemmin,
         kutsutaan `aseta_paikallisesti`-metodia.
         '''
         if instance is None:
           return
         data = instance.__dict__
-        if value == str(DEFERRED):
-          # Jos kannasta saadaan paluuarvona vain tieto ohitetusta kentästä,
-          # jätetään rivin tietoihin merkintä tästä.
-          data[self.lume_ohitettu_avain] = True
-        elif data.get(self.field_name, self) is not self \
-        or data.get(self.lume_ohitettu_avain, False):
+        if data.get(self.field_name, self) is not self:
           # Jos kentän arvo on asetettu jo aiemmin
-          # tai kannasta ei saatu kentän arvoa,
           # kutsu kenttäkohtaisesti määritettyä `aseta`-funktiota.
           kentta.aseta_paikallisesti(instance, value)
         else:
@@ -173,14 +138,10 @@ class Lumesaate(object):
     class Lookup(field.get_lookup('exact')):
       def process_rhs(self2, compiler, connection):
         # pylint: disable=no-self-argument, unused-argument
-        if self.lataa_kannasta(compiler.query):
-          sql, params = compiler.compile(self2.rhs.resolve_expression(
-            query=compiler.query
-          ))
-          return '(' + sql + ')', params
-        else:
-          # Palautetaan kysely, jonka mukainen liitostaulu jää tyhjäksi.
-          return 'NULL', []
+        sql, params = compiler.compile(self2.rhs.resolve_expression(
+          query=compiler.query
+        ))
+        return '(' + sql + ')', params
         # def process_rhs
       # class Lookup
 
@@ -191,16 +152,18 @@ class Lumesaate(object):
     '''
     Palauta SELECT-lauseke.
     Tätä kutsutaan `Col.as_sql`-metodista (ks. `puukko.py`).
+
+    Huom. viittauksen takaa haettavat lumekentät eivät toimi oikein,
+    joten palautetaan niiden sijaan `NULL`.
     '''
-    if self.lataa_kannasta(compiler.query):
+    if compiler.query.model is self.model:
       return self.kysely.resolve_expression(
         query=compiler.query
       ).as_sql(
         compiler, compiler.connection
       )
     else:
-      # Palautetaan kysely, joka tunnistetaan ohitetuksi arvoksi.
-      return '%s', [DEFERRED]
+      return 'NULL', []
     # def sql_select
 
   # class Lumesaate
