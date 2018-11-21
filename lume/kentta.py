@@ -126,13 +126,20 @@ class Lumesaate(object):
         if instance is None:
           return
         data = instance.__dict__
-        if data.get(self.field_name, self) is not self:
+        if data.get(self.field_name, self) is self:
+          # Kun arvo ladataan ensimmäisen kerran kannasta,
+          # asetetaan normaalisti datasanakirjaan.
+          data[self.field_name] = value
+        elif data.get(self.field_name, self) == value:
+          # Jos arvo ei muutu, ei tehdä mitään.
+          # Muuten mm. `django.db.models.query.ModelIterable.__iter__` kaatuu.
+          pass
+        else:
           # Jos kentän arvo on asetettu jo aiemmin,
-          # kutsu kenttäkohtaisesti määritettyä `aseta`-funktiota.
+          # kutsutaan kenttäkohtaisesti määritettyä `aseta`-funktiota
+          # ja asetetaan sen jälkeen datasanakirjaan.
           kentta.aseta_paikallisesti(instance, value)
-        # Kun arvo on asetettu paikallisesti tai haettu kannasta,
-        # lisätään normaalisti datasanakirjaan.
-        data[self.field_name] = value
+          data[self.field_name] = value
         # def __set__
       # class Lumeominaisuus
     setattr(cls, self.attname, Lumeominaisuus(self.attname))
