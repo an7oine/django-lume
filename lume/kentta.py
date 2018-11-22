@@ -160,10 +160,13 @@ class Lumesaate(object):
     class Lookup(field.get_lookup('exact')):
       def process_rhs(self2, compiler, connection):
         # pylint: disable=no-self-argument, unused-argument
-        sql, params = compiler.compile(self2.rhs.resolve_expression(
-          query=compiler.query
-        ))
-        return '(' + sql + ')', params
+        if compiler.query.model is self.model:
+          sql, params = compiler.compile(self2.rhs.resolve_expression(
+            query=compiler.query
+          ))
+          return '(' + sql + ')', params
+        else:
+          return 'NULL', []
         # def process_rhs
       # class Lookup
 
@@ -179,11 +182,9 @@ class Lumesaate(object):
     joten palautetaan niiden sijaan `NULL`.
     '''
     if compiler.query.model is self.model:
-      return self.kysely.resolve_expression(
+      return compiler.compile(self.kysely.resolve_expression(
         query=compiler.query
-      ).as_sql(
-        compiler, compiler.connection
-      )
+      ))
     else:
       return 'NULL', []
     # def sql_select
