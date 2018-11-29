@@ -130,27 +130,24 @@ def deferred_to_data(oletus, self, target, callback):
   Lisää pyydetyt tai oletusarvoiset lumekentät kyselyyn
   ennen lopullisten kenttien määräämistä:
     1. `qs.only(...)` -> oletustoteutus (nimetyt kentät haetaan)
-    2. `qs.defer(...).lume(...)` -> lisää ne lumekentät, joita ei nimetty,
-    `defer`-luetteloon
+    2. `qs.defer(...).lume(...)` -> lisää ne ei-automaattiset lumekentät,
+      joita ei nimetty, `defer`-luetteloon
     3. `qs.defer(...)` -> lisää ei-automaattiset lumekentät `defer`-luetteloon
-    4. `qs.lume(...)` -> muodosta `defer`-luettelo ei-nimetyistä lumekentistä
+    4. `qs.lume(...)` -> muodosta `defer`-luettelo ei-automaattisista,
+      ei-nimetyistä lumekentistä
     5. `qs` -> muodosta `defer`-luettelo ei-automaattisista lumekentistä
   '''
   field_names, defer = self.deferred_loading
   if not defer: # `qs.only()`
     return oletus(self, target, callback)
-  if hasattr(self, 'pyydetyt_lumekentat'): # `qs.lume()`
-    for kentta in self.get_meta().get_fields():
-      if isinstance(kentta, Lumesaate) \
-      and not kentta.name in self.pyydetyt_lumekentat:
-        field_names = field_names.union((kentta.name,))
-    # if pyydetyt_lumekentat
-  else:
-    for kentta in self.get_meta().get_fields():
-      if isinstance(kentta, Lumesaate) \
-      and not kentta.automaattinen:
-        field_names = field_names.union((kentta.name,))
-    # else
+
+  pyydetyt_lumekentat = getattr(self, 'pyydetyt_lumekentat', [])
+  for kentta in self.get_meta().get_fields():
+    if isinstance(kentta, Lumesaate) \
+    and not kentta.automaattinen \
+    and not kentta.name in pyydetyt_lumekentat:
+      field_names = field_names.union((kentta.name,))
+
   self.deferred_loading = field_names, True
   return oletus(self, target, callback)
   # def deferred_to_data

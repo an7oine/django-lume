@@ -53,9 +53,11 @@ class Malli(models.Model):
   ...
 ```
 
-Automaattisiksi määritetyt näennäiskentät lisätään oletuksena kaikkiin kyselyihin. Tästä voidaan poiketa kutsumalla `QuerySet`-luokan metodia `lume('kenttä1', 'kenttä2', ...)`. Kutsu `lume(None)` poistaa kaikki (myös automaattiset) lumekentät kyselystä. Metodikutsut kasaantuvat, joten `qs.lume('k1', 'k2') == qs.lume('k1')....lume('k2')`.
+Automaattisiksi määritetyt näennäiskentät lisätään oletuksena kaikkiin kyselyihin. Lisäksi kutsumalla `QuerySet`-luokan metodia `lume('kenttä1', 'kenttä2', ...)` voidaan lisätä kyselykohtaisia lumekenttiä mukaan kyselyyn. Metodikutsut kasaantuvat, joten `qs.lume('k1', 'k2') == qs.lume('k1')....lume('k2')`.
 
-Kyselyyn mukaan otettavat tai siitä pois jätettävät lumekentät voidaan määrittää myös tavanomaisten `only()`- ja `defer()`-kutsujen avulla. Jälkimmäinen huomioi myös kentän `automaattinen`-statuksen.
+Kutsu `lume(None)` poistaa kaikki aiemmin pyydetyt lumekentät kyselystä. Automaattisiksi määritellyt kentät lisätään tällöinkin kyselyyn. 
+
+Kyselyyn mukaan otettavat tai siitä pois jätettävät lumekentät voidaan määrittää myös tavanomaisten `only()`- ja `defer()`-kutsujen avulla.
 
 
 ## Kentän laskenta ja asettaminen
