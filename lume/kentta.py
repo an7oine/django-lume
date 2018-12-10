@@ -55,6 +55,7 @@ class Lumesaate(object):
 
     # Ei käytetä todellista tietokantasaraketta.
     self.column = None
+    self.serialize = False
     # def __init__
 
   def deconstruct(self):
