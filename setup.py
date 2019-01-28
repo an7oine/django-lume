@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 
 from setuptools import setup, find_packages
+
+__import__('setuptools')._install_setup_requires(dict(
+  setup_requires=['git-versiointi'],
+  dependency_links=[
+    'git+ssh://git@git.pispalanit.fi/pit/git-versiointi.git#egg=git-versiointi'
+  ],
+))
 from versiointi import asennustiedot
 
 setup(
