@@ -22,6 +22,9 @@ from django.db import models
 from django.utils.functional import cached_property
 
 
+__VIITTAUKSEN_TAKAA__ = '__VIITTAUKSEN_TAKAA__'
+
+
 class Lumesaate(object):
   # pylint: disable=no-member
 
@@ -124,7 +127,7 @@ class Lumesaate(object):
         Jos kentän arvo asetetaan suoraan kutsuvasta koodista,
         kutsutaan `aseta_paikallisesti`-metodia.
         '''
-        if instance is None:
+        if instance is None or value == __VIITTAUKSEN_TAKAA__:
           return
         data = instance.__dict__
         if data.get(self.field_name, self) is self:
@@ -153,7 +156,12 @@ class Lumesaate(object):
     # def get_joining_columns
 
   def get_extra_restriction(self, where_class, alias, related_alias):
-    ''' Luo JOIN-ehto muotoa (`a`.`id` = (SELECT ... from `b`)) '''
+    '''
+    Luo JOIN-ehto muotoa (`a`.`id` = (SELECT ... from `b`)).
+
+    Viittauksen takaa (mikäli alkuperäinen kysely kohdistuu muuhun
+    kuin nykyiseen malliin) palautetaan tyhjä JOIN-ehto.
+    '''
     # pylint: disable=unused-argument
     rhs_field = self.related_fields[0][1]
     field = rhs_field.model._meta.get_field(rhs_field.column)
@@ -180,14 +188,14 @@ class Lumesaate(object):
     Tätä kutsutaan `Col.as_sql`-metodista (ks. `puukko.py`).
 
     Huom. viittauksen takaa haettavat lumekentät eivät toimi oikein,
-    joten palautetaan niiden sijaan `NULL`.
+    joten palautetaan niiden sijaan erityinen `VIITTAUKSEN_TAKAA`-merkintä.
     '''
     if compiler.query.model is self.model:
       return compiler.compile(self.kysely.resolve_expression(
         query=compiler.query
       ))
     else:
-      return 'NULL', []
+      return f"'{__VIITTAUKSEN_TAKAA__}'", []
     # def sql_select
 
   # class Lumesaate
