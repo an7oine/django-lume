@@ -1,0 +1,13 @@
+include:
+  # before-scripti template python-pohjaisille projekteille.
+  - project: 'onebyte/ci-mallit'
+    ref: 'master'
+    file: '/lib_python_before_script.yml'
+  # Julkaisusputki python-pohjaisille projekteille. Vaatii python_before_script:it.
+  - project: 'onebyte/ci-mallit'
+    ref: 'master'
+    file: '/pipeline_python_release_git_versiointi.yml'
+
+# Tähän tulee listata kaikkien includettujen määritysten staget.
+stages:
+  - publish
