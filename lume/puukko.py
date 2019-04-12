@@ -164,3 +164,16 @@ def as_sql(oletus, self, compiler, connection):
   else:
     return oletus(self, compiler, connection)
   # def as_sql
+
+
+@puukota(models.Model)
+def get_deferred_fields(oletus, self):
+  '''
+  Älä sisällytä lumekenttiä malli-olion `get_deferred_fields()`-paluuarvoon.
+  Tätä joukkoa kysytään mallin tallentamisen ja kannasta lataamisen yhteydessä.
+  '''
+  return {
+    kentta for kentta in oletus(self)
+    if not isinstance(self._meta.get_field(kentta), Lumesaate)
+  }
+  # def get_deferred_fields
