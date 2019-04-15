@@ -84,10 +84,9 @@ class Lumesaate(object):
     if callable(self._laske):
       return self._laske(rivi)
     else:
-      return getattr(
-        self.model.objects.only(self.name).get(pk=rivi.pk),
-        self.name
-      )
+      return self.model.objects.filter(pk=rivi.pk).values_list(
+        self.name, flat=True
+      ).first()
     # def laske_paikallisesti
 
   def aseta_paikallisesti(self, rivi, arvo):
