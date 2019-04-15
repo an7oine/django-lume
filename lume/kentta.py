@@ -37,6 +37,7 @@ class Lumesaate(object):
       aseta (`lambda *args`): paikallinen arvon asetusfunktio
       automaattinen (`bool`): lisätäänkö kenttä automaattisesti kyselyyn?
     '''
+    kwargs.setdefault('default', models.DEFERRED)
     kysely = kwargs.pop('kysely', None)
     laske = kwargs.pop('laske', None)
     aseta = kwargs.pop('aseta', None)
@@ -59,8 +60,6 @@ class Lumesaate(object):
     # Ei käytetä todellista tietokantasaraketta.
     self.column = None
     self.serialize = False
-
-    self.default = models.DEFERRED
     # def __init__
 
   def deconstruct(self):
