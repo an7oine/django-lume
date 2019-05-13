@@ -44,7 +44,7 @@ class Lumesaate(object):
     automaattinen = kwargs.pop('automaattinen', False)
 
     # `kysely` on pakollinen.
-    assert kysely
+    assert kysely, 'Parametri `kysely` on pakollinen.'
 
     # Lisää super-kutsuun parametri `editable=False`,
     # jos `aseta`-funktiota ei ole määritetty.
