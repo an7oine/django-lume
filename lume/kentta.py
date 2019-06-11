@@ -130,7 +130,12 @@ class Lumesaate(object):
         if instance is None or value == __VIITTAUKSEN_TAKAA__:
           return
         data = instance.__dict__
-        if data.get(self.field_name, self) is self:
+        if not instance.pk:
+          # Uudelle riville asetetaan arvo paikallisesti.
+          # Asetetaan sitten rividataan.
+          kentta.aseta_paikallisesti(instance, value)
+          data[self.field_name] = value
+        elif data.get(self.field_name, self) is self:
           # Kun arvo ladataan ensimmäisen kerran kannasta,
           # asetetaan normaalisti datasanakirjaan.
           data[self.field_name] = value
