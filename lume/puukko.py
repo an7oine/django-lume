@@ -70,7 +70,7 @@ def _prepare_field_lists(oletus, self):
   # def _prepare_field_lists
 
 
-@puukota(Options, koriste=cached_property)
+@puukota(Options, koriste=property)
 def local_concrete_fields(oletus, self):
   '''
   Ohita lumekentät mallin konkreettisia kenttiä kysyttäessä.
