@@ -23,7 +23,6 @@ import functools
 from django.db.migrations import autodetector
 from django.db import models
 from django.db.models.options import Options
-from django.utils.functional import cached_property
 
 # pylint: disable=import-error
 from .kentta import Lumesaate
@@ -47,27 +46,17 @@ def puukota(moduuli, koriste=None, kopioi=None):
 
 
 @puukota(autodetector.MigrationAutodetector)
-def _prepare_field_lists(oletus, self):
+def __init__(oletus, self, *args, **kwargs):
   '''
   Poista lumekentät migraatioiden luonnin yhteydessä
   sekä vanhojen että uusien kenttien listalta.
   '''
-  oletus(self)
-  self.old_field_keys = {
-    (app_label, model_name, field_name)
-    for app_label, model_name, field_name in self.old_field_keys
-    if not isinstance(self.old_apps.get_model(
-      app_label, model_name
-    )._meta.get_field(field_name), Lumesaate)
-  }
-  self.new_field_keys = {
-    (app_label, model_name, field_name)
-    for app_label, model_name, field_name in self.new_field_keys
-    if not isinstance(self.new_apps.get_model(
-      app_label, model_name
-    )._meta.get_field(field_name), Lumesaate)
-  }
-  # def _prepare_field_lists
+  oletus(self, *args, **kwargs)
+  for malli in self.from_state.models.values():
+    malli.fields = [f for f in malli.fields if not isinstance(f[1], Lumesaate)]
+  for malli in self.to_state.models.values():
+    malli.fields = [f for f in malli.fields if not isinstance(f[1], Lumesaate)]
+  # def __init__
 
 
 @puukota(Options, koriste=property)
