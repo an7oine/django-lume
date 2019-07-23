@@ -134,7 +134,11 @@ def deferred_to_data(oletus, self, target, callback):
   for kentta in self.get_meta().get_fields():
     if isinstance(kentta, Lumesaate) \
     and not kentta.automaattinen \
-    and not kentta.name in pyydetyt_lumekentat:
+    and not kentta.name in pyydetyt_lumekentat \
+    and (
+      not isinstance(self.select_related, dict)
+      or kentta.name not in self.select_related
+    ):
       field_names = field_names.union((kentta.name,))
 
   self.deferred_loading = field_names, True
