@@ -19,7 +19,6 @@
 from __future__ import unicode_literals
 
 from django.db import models
-from django.utils.functional import cached_property
 
 
 __VIITTAUKSEN_TAKAA__ = '__VIITTAUKSEN_TAKAA__'
@@ -70,7 +69,7 @@ class Lumesaate(object):
     )
     # def deconstruct
 
-  @cached_property
+  @property
   def kysely(self):
     ''' Hae kyselylauseke (joko lambda tai suora arvo) '''
     return self._kysely() if callable(self._kysely) else self._kysely
