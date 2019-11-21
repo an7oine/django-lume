@@ -24,7 +24,7 @@ from django.db import models
 __VIITTAUKSEN_TAKAA__ = '__VIITTAUKSEN_TAKAA__'
 
 
-class Lumesaate(object):
+class Lumesaate:
   # pylint: disable=no-member
 
   def __init__(self, *args, **kwargs):
@@ -50,7 +50,7 @@ class Lumesaate(object):
     if not aseta:
       kwargs['editable'] = False
 
-    super(Lumesaate, self).__init__(*args, **kwargs)
+    super().__init__(*args, **kwargs)
     self._kysely = kysely
     self._laske = laske
     self._aseta = aseta
@@ -60,7 +60,7 @@ class Lumesaate(object):
     # def __init__
 
   def deconstruct(self):
-    name, path, args, kwargs = super(Lumesaate, self).deconstruct()
+    name, path, args, kwargs = super().deconstruct()
     return name, path, args, dict(
       kysely=self.kysely,
       **kwargs
@@ -101,7 +101,7 @@ class Lumesaate(object):
     Lisätään tietokantamalliin ominaisuuskuvaaja (Descriptor)
     lumekenttien käsittelyä varten.
     '''
-    super(Lumesaate, self).contribute_to_class(cls, *args, **kwargs)
+    super().contribute_to_class(cls, *args, **kwargs)
     kentta = self
     class Lumeominaisuus(models.query_utils.DeferredAttribute):
       def __get__(self, instance, cls=None):
