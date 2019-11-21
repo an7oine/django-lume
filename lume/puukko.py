@@ -73,6 +73,17 @@ def local_concrete_fields(oletus, self):
   # def local_concrete_fields
 
 
+@puukota(models.query.QuerySet)
+def _insert(oletus, self, objs, fields, **kwargs):
+  '''
+  Poista mahdolliset lumekentät tallennettavista kentistä.
+  '''
+  return oletus(self, objs, fields=[
+    f for f in fields if not isinstance(f, Lumesaate)
+  ], **kwargs)
+  # def _insert
+
+
 @puukota(models.query.QuerySet, kopioi='only')
 def lume(only, self, *fields):
   '''

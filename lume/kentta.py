@@ -56,8 +56,6 @@ class Lumesaate(object):
     self._aseta = aseta
     self.automaattinen = automaattinen
 
-    # Ei käytetä todellista tietokantasaraketta.
-    self.column = None
     self.serialize = False
     # def __init__
 
