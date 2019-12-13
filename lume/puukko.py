@@ -181,3 +181,17 @@ def get_deferred_fields(oletus, self):
     if not isinstance(self._meta.get_field(kentta), Lumesaate)
   }
   # def get_deferred_fields
+
+
+@puukota(models.Model)
+def refresh_from_db(oletus, self, **kwargs):
+  '''
+  Tyhjennä mahdolliset lumekentille aiemmin lasketut arvot;
+  suorita sitten tavanomainen kantakysely.
+  '''
+  data = self.__dict__
+  for kentta in self._meta.concrete_fields:
+    if isinstance(kentta, Lumesaate):
+      data.pop(kentta.attname, None)
+  return oletus(self, **kwargs)
+  # def refresh_from_db
