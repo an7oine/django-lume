@@ -112,12 +112,13 @@ class Lumesaate:
         if instance is None:
           return self
         data = instance.__dict__
-        if data.get(self.field_name, self) is self:
-          val = self._check_parent_chain(instance, self.field_name)
+        field_name = self.field.attname
+        if field_name not in data:
+          val = self._check_parent_chain(instance)
           if val is None:
             val = kentta.laske_paikallisesti(instance)
-          data[self.field_name] = val
-        return data[self.field_name]
+          data[field_name] = val
+        return data[field_name]
         # def __get__
       def __set__(self, instance, value):
         '''
@@ -127,16 +128,17 @@ class Lumesaate:
         if instance is None or value == __VIITTAUKSEN_TAKAA__:
           return
         data = instance.__dict__
+        field_name = self.field.attname
         if not instance.pk:
           # Uudelle riville asetetaan arvo paikallisesti.
           # Asetetaan sitten rividataan.
           kentta.aseta_paikallisesti(instance, value)
-          data[self.field_name] = value
-        elif data.get(self.field_name, self) is self:
+          data[field_name] = value
+        elif field_name not in data:
           # Kun arvo ladataan ensimmäisen kerran kannasta,
           # asetetaan normaalisti datasanakirjaan.
-          data[self.field_name] = value
-        elif data.get(self.field_name, self) == value:
+          data[field_name] = value
+        elif data.get(field_name) == value:
           # Jos arvo ei muutu, ei tehdä mitään.
           # Muuten mm. `django.db.models.query.ModelIterable.__iter__` kaatuu.
           pass
@@ -145,10 +147,10 @@ class Lumesaate:
           # kutsutaan kenttäkohtaisesti määritettyä `aseta`-funktiota
           # ja asetetaan sen jälkeen datasanakirjaan.
           kentta.aseta_paikallisesti(instance, value)
-          data[self.field_name] = value
+          data[field_name] = value
         # def __set__
       # class Lumeominaisuus
-    setattr(cls, self.attname, Lumeominaisuus(self.attname))
+    setattr(cls, self.attname, Lumeominaisuus(self))
     # def contribute_to_class
 
   def get_joining_columns(self, reverse_join=False):
