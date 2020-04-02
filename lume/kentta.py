@@ -72,6 +72,10 @@ class Lumesaate:
     ''' Hae kyselylauseke (joko lambda tai suora arvo) '''
     return self._kysely() if callable(self._kysely) else self._kysely
     # def kysely
+  @kysely.setter
+  def kysely(self, kysely):
+    self._kysely = kysely
+    # def kysely
 
   def laske_paikallisesti(self, rivi):
     '''
