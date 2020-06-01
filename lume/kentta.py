@@ -16,8 +16,6 @@
 #============================================================================
 # pylint: disable=invalid-name, useless-object-inheritance
 
-from __future__ import unicode_literals
-
 from django.db import models
 
 
@@ -27,23 +25,21 @@ __VIITTAUKSEN_TAKAA__ = '__VIITTAUKSEN_TAKAA__'
 class Lumesaate:
   # pylint: disable=no-member
 
-  def __init__(self, *args, **kwargs):
+  def __init__(
+    self, *args,
+    kysely, laske=None, aseta=None, automaattinen=False,
+    _toimii_viittauksen_takaa=False,
+    **kwargs
+  ):
     '''
     Alustaa lumekentän.
     Args:
-      kysely (`django.db.models.Expression` / `lambda`): kysely (pakollinen)
+      kysely (`django.db.models.Expression` / `lambda`): kysely
       laske (`lambda self`): paikallinen laskentafunktio
       aseta (`lambda *args`): paikallinen arvon asetusfunktio
       automaattinen (`bool`): lisätäänkö kenttä automaattisesti kyselyyn?
     '''
     kwargs.setdefault('default', models.DEFERRED)
-    kysely = kwargs.pop('kysely', None)
-    laske = kwargs.pop('laske', None)
-    aseta = kwargs.pop('aseta', None)
-    automaattinen = kwargs.pop('automaattinen', False)
-
-    # `kysely` on pakollinen.
-    assert kysely, 'Parametri `kysely` on pakollinen.'
 
     # Lisää super-kutsuun parametri `editable=False`,
     # jos `aseta`-funktiota ei ole määritetty.
@@ -55,6 +51,8 @@ class Lumesaate:
     self._laske = laske
     self._aseta = aseta
     self.automaattinen = automaattinen
+
+    self._toimii_viittauksen_takaa = _toimii_viittauksen_takaa
 
     self.serialize = False
     # def __init__
@@ -177,7 +175,9 @@ class Lumesaate:
     class Lookup(field.get_lookup('exact')):
       def process_rhs(self2, compiler, connection):
         # pylint: disable=no-self-argument, unused-argument
-        if compiler.query.model is self.model:
+        # pylint: disable=protected-access
+        if self._toimii_viittauksen_takaa \
+        or compiler.query.model is self.model:
           sql, params = compiler.compile(self2.rhs.resolve_expression(
             query=compiler.query
           ))
@@ -198,7 +198,8 @@ class Lumesaate:
     Huom. viittauksen takaa haettavat lumekentät eivät toimi oikein,
     joten palautetaan niiden sijaan erityinen `VIITTAUKSEN_TAKAA`-merkintä.
     '''
-    if compiler.query.model is self.model:
+    if self._toimii_viittauksen_takaa \
+    or compiler.query.model is self.model:
       return compiler.compile(self.kysely.resolve_expression(
         query=compiler.query
       ))
