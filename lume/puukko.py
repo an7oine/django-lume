@@ -53,9 +53,13 @@ def __init__(oletus, self, *args, **kwargs):
   '''
   oletus(self, *args, **kwargs)
   for malli in self.from_state.models.values():
-    malli.fields = [f for f in malli.fields if not isinstance(f[1], Lumesaate)]
+    malli.fields = {
+      l: f for l, f in malli.fields.items() if not isinstance(f, Lumesaate)
+    }
   for malli in self.to_state.models.values():
-    malli.fields = [f for f in malli.fields if not isinstance(f[1], Lumesaate)]
+    malli.fields = {
+      l: f for l, f in malli.fields.items() if not isinstance(f, Lumesaate)
+    }
   # def __init__
 
 
@@ -65,7 +69,7 @@ def local_concrete_fields(oletus, self):
   Ohita lumekentät mallin konkreettisia kenttiä kysyttäessä.
   '''
   return models.options.make_immutable_fields_list(
-    "concrete_fields", (
+    "local_concrete_fields", (
       f for f in self.local_fields
       if f.concrete and not isinstance(f, Lumesaate)
     )
