@@ -21,9 +21,7 @@ from django.db import models
 
 __VIITTAUKSEN_TAKAA__ = '__VIITTAUKSEN_TAKAA__'
 
-
-class Lumesaate:
-  # pylint: disable=no-member
+class Lumekentta(models.fields.Field):
 
   def __init__(
     self, *args,
@@ -207,4 +205,4 @@ class Lumesaate:
       return f"'{__VIITTAUKSEN_TAKAA__}'", []
     # def sql_select
 
-  # class Lumesaate
+  # class Lumekentta

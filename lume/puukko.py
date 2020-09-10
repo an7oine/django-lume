@@ -25,7 +25,7 @@ from django.db import models
 from django.db.models.options import Options
 
 # pylint: disable=import-error
-from .kentta import Lumesaate
+from .kentta import Lumekentta
 # pylint: enable=import-error
 
 
@@ -54,11 +54,11 @@ def __init__(oletus, self, *args, **kwargs):
   oletus(self, *args, **kwargs)
   for malli in self.from_state.models.values():
     malli.fields = {
-      l: f for l, f in malli.fields.items() if not isinstance(f, Lumesaate)
+      l: f for l, f in malli.fields.items() if not isinstance(f, Lumekentta)
     }
   for malli in self.to_state.models.values():
     malli.fields = {
-      l: f for l, f in malli.fields.items() if not isinstance(f, Lumesaate)
+      l: f for l, f in malli.fields.items() if not isinstance(f, Lumekentta)
     }
   # def __init__
 
@@ -71,7 +71,7 @@ def local_concrete_fields(oletus, self):
   return models.options.make_immutable_fields_list(
     "local_concrete_fields", (
       f for f in self.local_fields
-      if f.concrete and not isinstance(f, Lumesaate)
+      if f.concrete and not isinstance(f, Lumekentta)
     )
   )
   # def local_concrete_fields
@@ -83,7 +83,7 @@ def _insert(oletus, self, objs, fields, **kwargs):
   Poista mahdolliset lumekentät tallennettavista kentistä.
   '''
   return oletus(self, objs, fields=[
-    f for f in fields if not isinstance(f, Lumesaate)
+    f for f in fields if not isinstance(f, Lumekentta)
   ], **kwargs)
   # def _insert
 
@@ -147,7 +147,7 @@ def deferred_to_data(oletus, self, target, callback):
 
   pyydetyt_lumekentat = getattr(self, 'pyydetyt_lumekentat', [])
   for kentta in self.get_meta().get_fields():
-    if isinstance(kentta, Lumesaate) \
+    if isinstance(kentta, Lumekentta) \
     and not kentta.automaattinen \
     and not kentta.name in pyydetyt_lumekentat \
     and (
@@ -167,7 +167,7 @@ def as_sql(oletus, self, compiler, connection):
   Pyydä lumekenttää vastaavan sarakkeen SQL-kysely kentältä itseltään.
   '''
   # pylint: disable=redefined-outer-name
-  if isinstance(self.target, Lumesaate):
+  if isinstance(self.target, Lumekentta):
     return self.target.sql_select(compiler)
   else:
     return oletus(self, compiler, connection)
@@ -182,7 +182,7 @@ def get_deferred_fields(oletus, self):
   '''
   return {
     kentta for kentta in oletus(self)
-    if not isinstance(self._meta.get_field(kentta), Lumesaate)
+    if not isinstance(self._meta.get_field(kentta), Lumekentta)
   }
   # def get_deferred_fields
 
@@ -195,7 +195,7 @@ def refresh_from_db(oletus, self, **kwargs):
   '''
   data = self.__dict__
   for kentta in self._meta.concrete_fields:
-    if isinstance(kentta, Lumesaate):
+    if isinstance(kentta, Lumekentta):
       data.pop(kentta.attname, None)
   return oletus(self, **kwargs)
   # def refresh_from_db
