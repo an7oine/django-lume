@@ -14,14 +14,25 @@
 # @copyright   Copyright (c) Pispalan Insinööritoimisto Oy
 # @license     All rights reserved
 #============================================================================
-# pylint: disable=invalid-name, useless-object-inheritance
+
+import functools
 
 from django.db import models
+from django.utils.functional import classproperty
 
+from .maare import Lumemaare
 
 __VIITTAUKSEN_TAKAA__ = '__VIITTAUKSEN_TAKAA__'
 
 class Lumekentta(models.fields.Field):
+
+  @classproperty
+  def descriptor_class(cls):
+    # pylint: disable=no-self-argument, invalid-name
+    @functools.wraps(super().descriptor_class, updated=())
+    class descriptor_class(Lumemaare, super().descriptor_class): pass
+    return descriptor_class
+    # def descriptor_class
 
   def __init__(
     self, *args,
@@ -95,63 +106,6 @@ class Lumekentta(models.fields.Field):
       raise RuntimeError('Asetusfunktiota ei ole määritetty: %s' % self)
     return self._aseta(rivi, arvo)
     # def aseta_paikallisesti
-
-  def contribute_to_class(self, cls, *args, **kwargs):
-    '''
-    Lisätään tietokantamalliin ominaisuuskuvaaja (Descriptor)
-    lumekenttien käsittelyä varten.
-    '''
-    super().contribute_to_class(cls, *args, **kwargs)
-    kentta = self
-    class Lumeominaisuus(models.query_utils.DeferredAttribute):
-      def __get__(self, instance, cls=None):
-        '''
-        Kysyttäessä kenttää, jota ei luettu kannasta,
-        haetaan sen arvo `laske_paikallisesti`-metodin avulla.
-        '''
-        if instance is None:
-          return self
-        data = instance.__dict__
-        field_name = self.field.attname
-        if field_name not in data:
-          val = self._check_parent_chain(instance)
-          if val is None:
-            val = kentta.laske_paikallisesti(instance)
-          data[field_name] = val
-        return data[field_name]
-        # def __get__
-      def __set__(self, instance, value):
-        '''
-        Jos kentän arvo asetetaan suoraan kutsuvasta koodista,
-        kutsutaan `aseta_paikallisesti`-metodia.
-        '''
-        if instance is None or value == __VIITTAUKSEN_TAKAA__:
-          return
-        data = instance.__dict__
-        field_name = self.field.attname
-        if not instance.pk:
-          # Uudelle riville asetetaan arvo paikallisesti.
-          # Asetetaan sitten rividataan.
-          kentta.aseta_paikallisesti(instance, value)
-          data[field_name] = value
-        elif field_name not in data:
-          # Kun arvo ladataan ensimmäisen kerran kannasta,
-          # asetetaan normaalisti datasanakirjaan.
-          data[field_name] = value
-        elif data.get(field_name) == value:
-          # Jos arvo ei muutu, ei tehdä mitään.
-          # Muuten mm. `django.db.models.query.ModelIterable.__iter__` kaatuu.
-          pass
-        else:
-          # Jos kentän arvo on asetettu jo aiemmin,
-          # kutsutaan kenttäkohtaisesti määritettyä `aseta`-funktiota
-          # ja asetetaan sen jälkeen datasanakirjaan.
-          kentta.aseta_paikallisesti(instance, value)
-          data[field_name] = value
-        # def __set__
-      # class Lumeominaisuus
-    setattr(cls, self.attname, Lumeominaisuus(self))
-    # def contribute_to_class
 
   def get_joining_columns(self, reverse_join=False):
     ''' Ohita normaali JOIN-ehto (`a`.`id` = `b`.`a_id`) '''
