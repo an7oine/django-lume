@@ -22,7 +22,6 @@ from django.utils.functional import classproperty
 
 from .maare import Lumemaare
 
-__VIITTAUKSEN_TAKAA__ = '__VIITTAUKSEN_TAKAA__'
 
 class Lumekentta(models.fields.Field):
 
@@ -37,7 +36,6 @@ class Lumekentta(models.fields.Field):
   def __init__(
     self, *args,
     kysely, laske=None, aseta=None, automaattinen=False,
-    _toimii_viittauksen_takaa=False,
     **kwargs
   ):
     '''
@@ -48,8 +46,6 @@ class Lumekentta(models.fields.Field):
       aseta (`lambda *args`): paikallinen arvon asetusfunktio
       automaattinen (`bool`): lisätäänkö kenttä automaattisesti kyselyyn?
     '''
-    kwargs.setdefault('default', models.DEFERRED)
-
     # Lisää super-kutsuun parametri `editable=False`,
     # jos `aseta`-funktiota ei ole määritetty.
     if not aseta:
@@ -60,8 +56,6 @@ class Lumekentta(models.fields.Field):
     self._laske = laske
     self._aseta = aseta
     self.automaattinen = automaattinen
-
-    self._toimii_viittauksen_takaa = _toimii_viittauksen_takaa
 
     self.serialize = False
     # def __init__
@@ -127,36 +121,53 @@ class Lumekentta(models.fields.Field):
     class Lookup(field.get_lookup('exact')):
       def process_rhs(self2, compiler, connection):
         # pylint: disable=no-self-argument, unused-argument
-        # pylint: disable=protected-access
-        if self._toimii_viittauksen_takaa \
-        or compiler.query.model is self.model:
-          sql, params = compiler.compile(self2.rhs.resolve_expression(
-            query=compiler.query
-          ))
-          return '(' + sql + ')', params
-        else:
-          return 'NULL', []
+        return compiler.compile(self2.rhs.resolve_expression(
+          query=compiler.query
+        ))
         # def process_rhs
       # class Lookup
 
     return Lookup(field.get_col(alias), self.kysely)
     # def get_extra_restriction
 
-  def sql_select(self, compiler):
+  def sql_select(self, col, compiler, connection):
     '''
     Palauta SELECT-lauseke.
     Tätä kutsutaan `Col.as_sql`-metodista (ks. `puukko.py`).
-
-    Huom. viittauksen takaa haettavat lumekentät eivät toimi oikein,
-    joten palautetaan niiden sijaan erityinen `VIITTAUKSEN_TAKAA`-merkintä.
     '''
-    if self._toimii_viittauksen_takaa \
-    or compiler.query.model is self.model:
+    # pylint: disable=unused-argument
+    join = compiler.query.alias_map.get(col.alias)
+    if isinstance(join, models.sql.datastructures.Join):
+      # Liitostaulu: muodosta alikysely tähän tauluun ja rajaa
+      # kysyttävä rivi liitosehtojen mukaisesti.
+      if isinstance(join.join_field, models.ForeignObjectRel):
+        malli = join.join_field.field.remote_field.model
+      else:
+        malli = join.join_field.model
+      return compiler.compile(
+        models.Subquery(
+          self.model.objects.filter(**{
+            sarakkeet[1]: models.expressions.Col(
+              join.parent_alias, malli._meta.get_field(sarakkeet[0])
+            ).resolve_expression(
+              query=compiler.query
+            )
+            for sarakkeet in join.join_field.get_joining_columns()
+          }).values(**{
+            # Käytetään kentän nimestä poikkeavaa aliasta.
+            f'_{self.name}_join': self.kysely,
+          })[:1],
+          output_field=self,
+        ).resolve_expression(query=compiler.query)
+      )
+    elif isinstance(join, models.sql.datastructures.BaseTable):
+      # Kyselyn aloitustaulu: tehdään suora kysely.
       return compiler.compile(self.kysely.resolve_expression(
         query=compiler.query
       ))
     else:
-      return f"'{__VIITTAUKSEN_TAKAA__}'", []
+      # Muita kyselytyyppejä ei tueta.
+      raise NotImplementedError
     # def sql_select
 
   # class Lumekentta

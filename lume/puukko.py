@@ -168,7 +168,7 @@ def as_sql(oletus, self, compiler, connection):
   '''
   # pylint: disable=redefined-outer-name
   if isinstance(self.target, Lumekentta):
-    return self.target.sql_select(compiler)
+    return self.target.sql_select(self, compiler, connection)
   else:
     return oletus(self, compiler, connection)
   # def as_sql
