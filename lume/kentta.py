@@ -83,12 +83,15 @@ class Lumekentta(models.fields.Field):
     Lasketaan kentän arvo paikallisesti, jos laskentafunktio on määritelty;
     muuten kysytään kenttää erikseen kannasta.
     '''
+    # pylint: disable=protected-access
     if callable(self._laske):
       return self._laske(rivi)
     else:
-      return self.model.objects.filter(pk=rivi.pk).values_list(
-        self.name, flat=True
-      ).first()
+      # Vrt. `django.db.models.Model.refresh_from_db`.
+      qs = rivi.__class__._base_manager.db_manager(
+        None, hints={'instance': rivi}
+      ).filter(pk=rivi.pk).only(self.attname)
+      return getattr(qs.get(), self.attname)
     # def laske_paikallisesti
 
   def aseta_paikallisesti(self, rivi, arvo):
