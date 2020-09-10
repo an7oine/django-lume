@@ -9,7 +9,9 @@ Django-tuki muiden kenttien mukaan tietokannassa laskettaville lume- eli näenn�
 $ pip install -e git+git://git@git.pispalanit.fi:pit/django-lume.git
 ```
 
-Yhteensopivuus: Django 1.11 + 2.x, Python 2 + 3
+Yhteensopivuus:
+* Python >= 3.6
+* Django >= 3.1
 
 # Käyttö
 
