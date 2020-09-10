@@ -114,14 +114,17 @@ class Lumekentta(models.fields.Field):
     '''
     Luo JOIN-ehto muotoa (`a`.`id` = (SELECT ... from `b`)).
 
-    Viittauksen takaa (mikäli alkuperäinen kysely kohdistuu muuhun
-    kuin nykyiseen malliin) palautetaan tyhjä JOIN-ehto.
+    Tätä kutsutaan vain `ForeignObject`-tyyppiselle kentälle.
     '''
-    # pylint: disable=unused-argument
+    # pylint: disable=unused-argument, no-member
     rhs_field = self.related_fields[0][1]
     field = rhs_field.model._meta.get_field(rhs_field.column)
 
     class Lookup(field.get_lookup('exact')):
+      '''
+      Muodosta JOIN-ehdon oikea puoli lumekentälle asetetun kyselyn
+      toteuttavana SQL-lausekkeena.
+      '''
       def process_rhs(self2, compiler, connection):
         # pylint: disable=no-self-argument, unused-argument
         return compiler.compile(self2.rhs.resolve_expression(
