@@ -146,18 +146,10 @@ class Lumekentta(models.fields.Field):
     if isinstance(join, models.sql.datastructures.Join):
       # Liitostaulu: muodosta alikysely tähän tauluun ja rajaa
       # kysyttävä rivi liitosehtojen mukaisesti.
-      if isinstance(join.join_field, models.ForeignObjectRel):
-        malli = join.join_field.field.remote_field.model
-      else:
-        malli = join.join_field.model
       return compiler.compile(
         models.Subquery(
           self.model.objects.filter(**{
-            sarakkeet[1]: models.expressions.Col(
-              join.parent_alias, malli._meta.get_field(sarakkeet[0])
-            ).resolve_expression(
-              query=compiler.query
-            )
+            sarakkeet[1]: models.expressions.OuterRef(sarakkeet[0])
             for sarakkeet in join.join_field.get_joining_columns()
           }).values(**{
             # Käytetään kentän nimestä poikkeavaa aliasta.
