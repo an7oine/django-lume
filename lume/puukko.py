@@ -16,17 +16,13 @@
 #============================================================================
 # pylint: disable=invalid-name, protected-access, unused-argument
 
-from __future__ import unicode_literals
-
 import functools
 
 from django.db.migrations import autodetector
 from django.db import models
 from django.db.models.options import Options
 
-# pylint: disable=import-error
 from .kentta import Lumekentta
-# pylint: enable=import-error
 
 
 def puukota(moduuli, koriste=None, kopioi=None):
@@ -161,19 +157,6 @@ def deferred_to_data(oletus, self, target, callback):
   # def deferred_to_data
 
 
-@puukota(models.expressions.Col)
-def as_sql(oletus, self, compiler, connection):
-  '''
-  Pyydä lumekenttää vastaavan sarakkeen SQL-kysely kentältä itseltään.
-  '''
-  # pylint: disable=redefined-outer-name
-  if isinstance(self.target, Lumekentta):
-    return self.target.sql_select(self, compiler, connection)
-  else:
-    return oletus(self, compiler, connection)
-  # def as_sql
-
-
 @puukota(models.Model)
 def get_deferred_fields(oletus, self):
   '''
@@ -196,6 +179,7 @@ def refresh_from_db(oletus, self, **kwargs):
   data = self.__dict__
   for kentta in self._meta.concrete_fields:
     if isinstance(kentta, Lumekentta):
+      data.pop(kentta.name, None)
       data.pop(kentta.attname, None)
   return oletus(self, **kwargs)
   # def refresh_from_db

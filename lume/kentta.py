@@ -18,9 +18,10 @@
 import functools
 
 from django.db import models
-from django.utils.functional import classproperty
+from django.utils.functional import cached_property, classproperty
 
 from .maare import Lumemaare
+from .sarake import Lumesarake
 
 
 class Lumekentta(models.fields.Field):
@@ -104,6 +105,31 @@ class Lumekentta(models.fields.Field):
     return self._aseta(rivi, arvo)
     # def aseta_paikallisesti
 
+  def get_col(self, alias, output_field=None):
+    # Ks. `Field.get_col`.
+    if output_field is None:
+      if isinstance(self, models.ForeignKey):
+        # Ks. `ForeignKey.get_col`.
+        # pylint: disable=no-member
+        output_field = self.target_field
+        while isinstance(output_field, models.ForeignKey):
+          output_field = output_field.target_field
+          if output_field is self:
+            raise ValueError('Cannot resolve output_field.')
+        # if isinstance
+      else:
+        output_field = self
+    if alias != self.model._meta.db_table or output_field != self:
+      return Lumesarake(alias, self, output_field)
+    else:
+      return self.cached_col
+    # def get_col
+
+  @cached_property
+  def cached_col(self):
+    return Lumesarake(self.model._meta.db_table, self)
+    # def cached_col
+
   def get_joining_columns(self, reverse_join=False):
     ''' Ohita normaali JOIN-ehto (`a`.`id` = `b`.`a_id`) '''
     # pylint: disable=unused-argument
@@ -125,9 +151,9 @@ class Lumekentta(models.fields.Field):
       Muodosta JOIN-ehdon oikea puoli lumekentälle asetetun kyselyn
       toteuttavana SQL-lausekkeena.
       '''
-      def process_rhs(self2, compiler, connection):
-        # pylint: disable=no-self-argument, unused-argument
-        return compiler.compile(self2.rhs.resolve_expression(
+      def process_rhs(self, compiler, connection):
+        # pylint: disable=unused-argument
+        return compiler.compile(self.rhs.resolve_expression(
           query=compiler.query
         ))
         # def process_rhs
@@ -135,37 +161,5 @@ class Lumekentta(models.fields.Field):
 
     return Lookup(field.get_col(alias), self.kysely)
     # def get_extra_restriction
-
-  def sql_select(self, col, compiler, connection):
-    '''
-    Palauta SELECT-lauseke.
-    Tätä kutsutaan `Col.as_sql`-metodista (ks. `puukko.py`).
-    '''
-    # pylint: disable=unused-argument
-    join = compiler.query.alias_map.get(col.alias)
-    if isinstance(join, models.sql.datastructures.Join):
-      # Liitostaulu: muodosta alikysely tähän tauluun ja rajaa
-      # kysyttävä rivi liitosehtojen mukaisesti.
-      return compiler.compile(
-        models.Subquery(
-          self.model.objects.filter(**{
-            sarakkeet[1]: models.expressions.OuterRef(sarakkeet[0])
-            for sarakkeet in join.join_field.get_joining_columns()
-          }).values(**{
-            # Käytetään kentän nimestä poikkeavaa aliasta.
-            f'_{self.name}_join': self.kysely,
-          })[:1],
-          output_field=self,
-        ).resolve_expression(query=compiler.query)
-      )
-    elif isinstance(join, models.sql.datastructures.BaseTable):
-      # Kyselyn aloitustaulu: tehdään suora kysely.
-      return compiler.compile(self.kysely.resolve_expression(
-        query=compiler.query
-      ))
-    else:
-      # Muita kyselytyyppejä ei tueta.
-      raise NotImplementedError
-    # def sql_select
 
   # class Lumekentta
