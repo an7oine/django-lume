@@ -98,7 +98,10 @@ class Lumekentta(models.fields.Field):
       qs = rivi.__class__._base_manager.db_manager(
         None, hints={'instance': rivi}
       ).filter(pk=rivi.pk).only(self.attname)
-      return getattr(qs.get(), self.attname)
+      try:
+        return getattr(qs.get(), self.attname)
+      except qs.model.DoesNotExist:
+        return None
     # def laske_paikallisesti
 
   def aseta_paikallisesti(self, rivi, arvo):
