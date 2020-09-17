@@ -49,16 +49,26 @@ class Lumemaare(models.query_utils.DeferredAttribute):
       return
     data = instance.__dict__
     field_name = self.field.attname
-    aiempi_arvo = data.get(field_name, self)
-    if aiempi_arvo is self:
-      aiempi_arvo = self._check_parent_chain(instance) or self
 
-    if aiempi_arvo is not self and aiempi_arvo != value:
-      # Jos arvo on jo olemassa eikä se muutu, ei tehdä mitään.
-      # Muuten mm. `django.db.models.query.ModelIterable.__iter__` kaatuu.
+    # Uusi rivi: asetetaan paikallisesti ja lisätään dataan.
+    if not data.get(instance._meta.pk.attname):
       self.field.aseta_paikallisesti(instance, value)
+      data[field_name] = value
 
-    data[field_name] = value
+    # Olemassaoleva rivi: verrataan mahdolliseen jo laskettuun
+    # tai aiemmin noudettuun arvoon.
+    else:
+      aiempi_arvo = data.get(field_name, self)
+      if aiempi_arvo is self:
+        aiempi_arvo = self._check_parent_chain(instance) or self
+      if aiempi_arvo is self:
+        data[field_name] = value
+      elif aiempi_arvo != value:
+        self.field.aseta_paikallisesti(instance, value)
+        data[field_name] = value
+      # else:
+      #   Jos arvo on jo olemassa eikä se muutu, ei tehdä mitään.
+      #   Muuten mm. `django.db.models.query.ModelIterable.__iter__` kaatuu.
     # def __set__
 
   # class Lumemaare
