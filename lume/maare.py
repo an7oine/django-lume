@@ -45,7 +45,7 @@ class Lumemaare(models.query_utils.DeferredAttribute):
     Jos kentän arvo asetetaan suoraan kutsuvasta koodista,
     kutsutaan `aseta_paikallisesti`-metodia.
     '''
-    if instance is None:
+    if instance is None or value is self.field.default:
       return
     data = instance.__dict__
     field_name = self.field.attname

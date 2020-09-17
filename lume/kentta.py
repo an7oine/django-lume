@@ -24,6 +24,9 @@ from .maare import Lumemaare
 from .sarake import Lumesarake
 
 
+EI_ASETETTU = object()
+
+
 class Lumekentta(models.fields.Field):
 
   @classproperty
@@ -53,6 +56,9 @@ class Lumekentta(models.fields.Field):
       kwargs['editable'] = False
 
     super().__init__(*args, **kwargs)
+
+    self.default = EI_ASETETTU
+
     self._kysely = kysely
     self._laske = laske
     self._aseta = aseta
