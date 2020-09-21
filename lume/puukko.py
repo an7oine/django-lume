@@ -17,6 +17,7 @@
 # pylint: disable=invalid-name, protected-access, unused-argument
 
 import functools
+import itertools
 
 from django.db.migrations import autodetector
 from django.db import models
@@ -57,6 +58,26 @@ def __init__(oletus, self, *args, **kwargs):
       l: f for l, f in malli.fields.items() if not isinstance(f, Lumekentta)
     }
   # def __init__
+
+
+@puukota(Options, koriste=property)
+def concrete_fields(oletus, self):
+  '''
+  Järjestä lumekentät viimeisiksi.
+
+  Tätä tarvitaan uutta riviä luotaessa, jotta todellisten
+  sarakkeiden arvot ovat käytettävissä lumekenttiä asetettaessa.
+  '''
+  return models.options.make_immutable_fields_list(
+    "concrete_fields", itertools.chain((
+      f for f in self.fields
+      if f.concrete and not isinstance(f, Lumekentta)
+    ), (
+      f for f in self.fields
+      if f.concrete and isinstance(f, Lumekentta)
+    ))
+  )
+  # def concrete_fields
 
 
 @puukota(Options, koriste=property)
