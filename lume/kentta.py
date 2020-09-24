@@ -154,21 +154,10 @@ class Lumekentta(models.fields.Field):
     # pylint: disable=unused-argument, no-member
     rhs_field = self.related_fields[0][1]
     field = rhs_field.model._meta.get_field(rhs_field.column)
-
-    class Lookup(field.get_lookup('exact')):
-      '''
-      Muodosta JOIN-ehdon oikea puoli lumekentälle asetetun kyselyn
-      toteuttavana SQL-lausekkeena.
-      '''
-      def process_rhs(self, compiler, connection):
-        # pylint: disable=unused-argument
-        return compiler.compile(self.rhs.resolve_expression(
-          query=compiler.query
-        ))
-        # def process_rhs
-      # class Lookup
-
-    return Lookup(field.get_col(alias), self.kysely)
+    return field.get_lookup('exact')(
+      self.get_col(related_alias),
+      field.get_col(alias),
+    )
     # def get_extra_restriction
 
   # class Lumekentta
