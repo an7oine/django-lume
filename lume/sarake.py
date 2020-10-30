@@ -56,9 +56,14 @@ class Lumesarake(models.expressions.Col):
       ))
       # elif isinstance (join, BaseTable)
 
+    elif join is None:
+      raise NotImplementedError(f'{join!r} is None')
+
     else:
       # Muita kyselytyyppejä ei tueta.
-      raise NotImplementedError
+      raise NotImplementedError(
+        f'not isinstance({join!r}, (BaseTable, Join))'
+      )
     # def as_sql
 
   # class Lumesarake
