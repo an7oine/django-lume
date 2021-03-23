@@ -88,6 +88,10 @@ class Lumekentta(models.fields.Field):
     )
     # def deconstruct
 
+  def formfield(self, **kwargs):
+    ''' Nollataan lomakkeelle annettu `initial`-arvo (EI_ASETETTU). '''
+    return super().formfield(**{**kwargs, 'initial': None})
+
   @property
   def kysely(self):
     ''' Hae kyselylauseke (joko lambda tai suora arvo) '''
