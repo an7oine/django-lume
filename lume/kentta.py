@@ -20,7 +20,7 @@ import functools
 from django.db import models
 from django.utils.functional import cached_property, classproperty
 
-from .maare import Lumemaare
+from .maare import Lumemaare, LumeFM2OMaare
 from .sarake import Lumesarake
 
 
@@ -28,6 +28,19 @@ EI_ASETETTU = object()
 
 
 class Lumekentta(models.fields.Field):
+
+  @classproperty
+  def forward_related_accessor_class(cls):
+    # pylint: disable=no-self-argument, invalid-name, no-member
+    # Huomaa, että super-toteutusta ei ole määritelty kaikille kenttätyypeille.
+    # Tällaisen kentän tapauksessa kutsuvaan koodiin nousee AttributeError.
+    @functools.wraps(super().forward_related_accessor_class, updated=())
+    class forward_related_accessor_class(
+      LumeFM2OMaare,
+      super().forward_related_accessor_class
+    ): pass
+    return forward_related_accessor_class
+    # def forward_related_accessor_class
 
   @classproperty
   def descriptor_class(cls):
@@ -85,23 +98,37 @@ class Lumekentta(models.fields.Field):
     self._kysely = kysely
     # def kysely
 
-  def laske_paikallisesti(self, rivi):
+  def laske_paikallisesti(self, rivi, select_related=False):
     '''
-    Lasketaan kentän arvo paikallisesti, jos laskentafunktio on määritelty;
-    muuten kysytään kenttää erikseen kannasta.
+    Lasketaan kentän arvo paikallisesti, jos
+    - laskentafunktio on määritelty; ja
+    - laskentafunktio palauttaa muun arvon kuin EI_ASETETTU.
+
+    Muuten kysytään kenttää erikseen kannasta.
+
+    Parametrillä `select_related=True` palautetaan kokonainen, viitattu
+    (M2O tai O2O) rivi kannasta.
     '''
     # pylint: disable=protected-access
     if callable(self._laske):
-      return self._laske(rivi)
-    else:
-      # Vrt. `django.db.models.Model.refresh_from_db`.
-      qs = rivi.__class__._base_manager.db_manager(
-        None, hints={'instance': rivi}
-      ).filter(pk=rivi.pk).only(self.attname)
-      try:
-        return getattr(qs.get(), self.attname)
-      except qs.model.DoesNotExist:
-        return None
+      arvo = self._laske(rivi)
+      if arvo is not EI_ASETETTU:
+        if select_related:
+          return arvo
+        return getattr(arvo, 'pk', arvo)
+      # if callable
+
+    # Kysytään erikseen kannasta.
+    # Vrt. `django.db.models.Model.refresh_from_db`.
+    qs = rivi.__class__._base_manager.db_manager(
+      None, hints={'instance': rivi}
+    ).filter(pk=rivi.pk).only(self.attname)
+    if select_related:
+      qs = qs.select_related(self.name)
+    try:
+      return getattr(qs.get(), self.name if select_related else self.attname)
+    except qs.model.DoesNotExist:
+      return None
     # def laske_paikallisesti
 
   def aseta_paikallisesti(self, rivi, arvo):

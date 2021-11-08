@@ -35,7 +35,10 @@ class Lumemaare(models.query_utils.DeferredAttribute):
       val = self._check_parent_chain(instance)
       if val is None:
         # Lasketaan arvo paikallisesti tai kysytään kannasta.
-        val = self.field.laske_paikallisesti(instance)
+        val = self.field.laske_paikallisesti(
+          instance,
+          select_related=False,
+        )
       data[field_name] = val
     return data[field_name]
     # def __get__
@@ -72,3 +75,23 @@ class Lumemaare(models.query_utils.DeferredAttribute):
     # def __set__
 
   # class Lumemaare
+
+
+class LumeFM2OMaare:
+  def get_object(self, instance):
+    '''
+    Kysyttäessä viittausta toiseen malliin, jota ei ole välimuistissa,
+    haetaan sen sisältö `laske_paikallisesti(select_related=True)`-kutsun
+    avulla.
+
+    Vrt. esim. ForwardManyToOneDescriptor.get_object.
+    '''
+    # pylint: disable=no-member
+    # Huomaa, että `self.field` asetetaan kaikille kenttätyyppikohtaisille
+    # Django-kuvaajille, joista käsillä oleva luokka voidaan periyttää.
+    return self.field.laske_paikallisesti(
+      instance,
+      select_related=True,
+    )
+    # def get_object
+  # class LumeFM2OMaare
