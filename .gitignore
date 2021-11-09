@@ -3,6 +3,8 @@
 *.pyc
 *.py@neomake_[0-9_]*.py
 
+.DS_Store
+
 .Python
 env/
 build/
