@@ -112,10 +112,12 @@ class Lumekentta(models.fields.Field):
     qs = rivi.__class__._base_manager.db_manager(
       None, hints={'instance': rivi}
     ).filter(pk=rivi.pk).only(self.attname)
-    if select_related:
-      qs = qs.select_related(self.name)
+    # Ei toimi toistaiseksi.
+    #if select_related:
+    #  qs = qs.select_related(self.name)
     try:
-      return getattr(qs.get(), self.name if select_related else self.attname)
+      #return getattr(qs.get(), self.name if select_related else self.attname)
+      return getattr(qs.get(), self.attname)
     except qs.model.DoesNotExist:
       return None
     # def laske_paikallisesti
