@@ -89,9 +89,14 @@ class LumeFM2OMaare:
     # pylint: disable=no-member
     # Huomaa, että `self.field` asetetaan kaikille kenttätyyppikohtaisille
     # Django-kuvaajille, joista käsillä oleva luokka voidaan periyttää.
-    return self.field.laske_paikallisesti(
+    tulos = self.field.laske_paikallisesti(
       instance,
       select_related=True,
     )
+    # Palautetaan tulos sellaisenaan vain, jos se on pyydetyn mallin rivi.
+    if isinstance(tulos, self.field.related_model):
+      return tulos
+    else:
+      return super().get_object(instance)
     # def get_object
   # class LumeFM2OMaare
