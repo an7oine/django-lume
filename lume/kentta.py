@@ -2,6 +2,7 @@
 
 import functools
 
+from django import VERSION as django_versio
 from django.db import models
 from django.utils.functional import cached_property, classproperty
 
@@ -163,11 +164,14 @@ class Lumekentta(models.fields.Field):
     return tuple()
     # def get_joining_columns
 
-  def get_extra_restriction(self, where_class, alias, related_alias):
+  def get_extra_restriction(self, alias, related_alias):
     '''
     Luo JOIN-ehto muotoa (`a`.`id` = (SELECT ... from `b`)).
 
     Tätä kutsutaan vain `ForeignObject`-tyyppiselle kentälle.
+
+    Huomaa erilliset kutsukäytännöt (parametrien lukumäärä)
+    Django-versioilla 3.2 / 4.0.
     '''
     # pylint: disable=unused-argument, no-member
     rhs_field = self.related_fields[0][1]
@@ -177,5 +181,14 @@ class Lumekentta(models.fields.Field):
       field.get_col(alias),
     )
     # def get_extra_restriction
+
+  if django_versio < (4, 0):
+    # pylint: disable=function-redefined, no-member, unused-argument
+    # Hyväksytään aiemmin käytössä ollut `where_class`-parametri.
+    @functools.wraps(get_extra_restriction)
+    def get_extra_restriction(self, where_class, alias, related_alias):
+      return __class__.get_extra_restriction.__wrapped__(
+        self, alias, related_alias
+      )
 
   # class Lumekentta
