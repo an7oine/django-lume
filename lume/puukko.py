@@ -22,6 +22,7 @@ import itertools
 from django.db.migrations import autodetector
 from django.db import models
 from django.db.models.options import Options
+from django import VERSION as django_versio
 
 from .kentta import Lumekentta
 
@@ -146,7 +147,7 @@ def lisaa_lumekentat(oletus, self, kentat):
 
 
 @puukota(models.sql.query.Query)
-def deferred_to_data(oletus, self, target, callback):
+def deferred_to_data(oletus, self, target, callback=None):
   '''
   Lisää pyydetyt tai oletusarvoiset lumekentät kyselyyn
   ennen lopullisten kenttien määräämistä:
@@ -157,10 +158,19 @@ def deferred_to_data(oletus, self, target, callback):
     4. `qs.lume(...)` -> muodosta `defer`-luettelo ei-automaattisista,
       ei-nimetyistä lumekentistä
     5. `qs` -> muodosta `defer`-luettelo ei-automaattisista lumekentistä
+
+  Django 4.1: nimeämätön argumentti `callback` on poistunut.
   '''
+  if django_versio < (4, 1):
+    # Syötetään oletustoteutukselle aiempi, pakollinen `callback`.
+    @functools.wraps(oletus)
+    def oletus(*args):
+      # pylint: disable=function-redefined
+      return oletus.__wrapped__(*args, callback)
+
   field_names, defer = self.deferred_loading
   if not defer: # `qs.only()`
-    return oletus(self, target, callback)
+    return oletus(self, target)
 
   pyydetyt_lumekentat = getattr(self, 'pyydetyt_lumekentat', [])
   for kentta in self.get_meta().get_fields():
@@ -174,7 +184,7 @@ def deferred_to_data(oletus, self, target, callback):
       field_names = field_names.union((kentta.name,))
 
   self.deferred_loading = field_names, True
-  return oletus(self, target, callback)
+  return oletus(self, target)
   # def deferred_to_data
 
 
