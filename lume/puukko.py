@@ -178,12 +178,16 @@ def deferred_to_data(oletus, self, target, callback):
   # def deferred_to_data
 
 
+__get_deferred_fields_ohita = False
 @puukota(models.Model)
 def get_deferred_fields(oletus, self):
   '''
   Älä sisällytä lumekenttiä malli-olion `get_deferred_fields()`-paluuarvoon.
   Tätä joukkoa kysytään mallin tallentamisen ja kannasta lataamisen yhteydessä.
   '''
+  global __get_deferred_fields_ohita
+  if __get_deferred_fields_ohita:
+    return oletus(self)
   return {
     kentta for kentta in oletus(self)
     if not isinstance(self._meta.get_field(kentta), Lumekentta)
@@ -197,10 +201,16 @@ def refresh_from_db(oletus, self, **kwargs):
   Tyhjennä mahdolliset lumekentille aiemmin lasketut arvot;
   suorita sitten tavanomainen kantakysely.
   '''
+  global __get_deferred_fields_ohita
   data = self.__dict__
   for kentta in self._meta.concrete_fields:
     if isinstance(kentta, Lumekentta):
       data.pop(kentta.name, None)
       data.pop(kentta.attname, None)
-  return oletus(self, **kwargs)
+  if __get_deferred_fields_ohita:
+    return oletus(self, **kwargs)
+  __get_deferred_fields_ohita = True
+  paluu = oletus(self, **kwargs)
+  __get_deferred_fields_ohita = False
+  return paluu
   # def refresh_from_db
