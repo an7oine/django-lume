@@ -32,7 +32,7 @@ def puukota(moduuli, koriste=None, kopioi=None):
   Korvaa moduulissa olevan metodin tai lisää uuden (`kopioi`).
   '''
   def puukko(funktio):
-    toteutus = getattr(moduuli, kopioi or funktio.__name__, None)
+    toteutus = getattr(moduuli, kopioi or funktio.__name__)
     def uusi_toteutus(*args, **kwargs):
       return funktio(toteutus, *args, **kwargs)
     setattr(
