@@ -21,3 +21,8 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Tox
+.tox
+.coverage
+.testi.sqlite
