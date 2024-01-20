@@ -16,6 +16,7 @@
 #============================================================================
 # pylint: disable=invalid-name, protected-access, unused-argument
 
+from contextlib import contextmanager
 import functools
 import itertools
 
@@ -228,3 +229,32 @@ def refresh_from_db(oletus, self, **kwargs):
   __get_deferred_fields_ohita = False
   return paluu
   # def refresh_from_db
+
+
+@contextmanager
+def _ohita_lumekentat():
+  assert not hasattr(Options, 'local_fields')
+  def local_fields(self):
+    _local_fields = self.__dict__['local_fields']
+    return type(_local_fields)(
+      f for f in _local_fields
+      if not isinstance(f, Lumekentta)
+    )
+  Options.local_fields = property(local_fields)
+  try:
+    yield
+  finally:
+    del Options.local_fields
+
+
+@puukota(models.Model, koriste=classmethod)
+def _check_field_name_clashes(oletus, cls):
+  with _ohita_lumekentat():
+    return oletus.__func__(cls)
+  # def _check_field_name_clashes
+
+
+@puukota(models.Model, koriste=classmethod)
+def _check_model(oletus, cls):
+  with _ohita_lumekentat():
+    return oletus.__func__(cls)
