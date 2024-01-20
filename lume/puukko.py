@@ -22,7 +22,6 @@ import itertools
 from django.db.migrations import autodetector
 from django.db import models
 from django.db.models.options import Options
-from django import VERSION as django_versio
 
 from .kentta import Lumekentta
 
@@ -146,94 +145,51 @@ def lisaa_lumekentat(oletus, self, kentat):
   # def lisaa_lumekentat
 
 
-if django_versio < (4, 2):
-  @puukota(models.sql.query.Query)
-  def deferred_to_data(oletus, self, target, callback=None):
-    '''
-    Lisää pyydetyt tai oletusarvoiset lumekentät kyselyyn
-    ennen lopullisten kenttien määräämistä:
-      1. `qs.only(...)` -> oletustoteutus (nimetyt kentät haetaan)
-      2. `qs.defer(...).lume(...)` -> lisää ne ei-automaattiset lumekentät,
-        joita ei nimetty, `defer`-luetteloon
-      3. `qs.defer(...)` -> lisää ei-automaattiset lumekentät `defer`-luetteloon
-      4. `qs.lume(...)` -> muodosta `defer`-luettelo ei-automaattisista,
-        ei-nimetyistä lumekentistä
-      5. `qs` -> muodosta `defer`-luettelo ei-automaattisista lumekentistä
+@puukota(models.sql.query.Query)
+def get_select_mask(oletus, self):
+  field_names, defer = self.deferred_loading
+  if not field_names and defer:
+    return self._get_defer_select_mask(self.get_meta(), {})
+  return oletus(self)
+  # def get_select_mask
 
-    Django 4.1: nimeämätön argumentti `callback` on poistunut.
-    '''
-    if django_versio < (4, 1):
-      # Syötetään oletustoteutukselle aiempi, pakollinen `callback`.
-      @functools.wraps(oletus)
-      def oletus(*args):
-        # pylint: disable=function-redefined
-        return oletus.__wrapped__(*args, callback)
-
-    field_names, defer = self.deferred_loading
-    if not defer: # `qs.only()`
-      return oletus(self, target)
-
-    pyydetyt_lumekentat = getattr(self, 'pyydetyt_lumekentat', [])
-    for kentta in self.get_meta().get_fields():
-      if isinstance(kentta, Lumekentta) \
-      and not kentta.automaattinen \
-      and not kentta.name in pyydetyt_lumekentat \
-      and (
-        not isinstance(self.select_related, dict)
-        or kentta.name not in self.select_related
-      ):
-        field_names = field_names.union((kentta.name,))
-
-    self.deferred_loading = field_names, True
-    return oletus(self, target)
-    # def deferred_to_data
-
-else:  # Django ≥ 4.2
-  @puukota(models.sql.query.Query)
-  def get_select_mask(oletus, self):
-    field_names, defer = self.deferred_loading
-    if not field_names and defer:
-      return self._get_defer_select_mask(self.get_meta(), {})
-    return oletus(self)
-    # def get_select_mask
-
-  @puukota(models.sql.query.Query)
-  def _get_defer_select_mask(oletus, self, opts, mask, select_mask=None):
-    if self.model is not opts.model:
-      return oletus(self, opts, mask, select_mask=select_mask)
-
-    if select_mask is None:
-      select_mask = {}
-
-    for pyydetty_lumekentta in getattr(self, 'pyydetyt_lumekentat', ()):
-      _opts, _select_mask = opts, select_mask
-      for fn in pyydetty_lumekentta.split(models.sql.query.LOOKUP_SEP):
-        kentta = _opts.get_field(fn)
-        _select_mask = _select_mask.setdefault(kentta, {})
-        try:
-          _opts = kentta.remote_field.model._meta.concrete_model._meta
-        except AttributeError:
-          break
-
-    def taydenna_maski(opts, mask, select_related):
-      for kentta in opts.get_fields():
-        if kentta.is_relation \
-        and isinstance(self.select_related, dict) \
-        and (_select_related := select_related.get(kentta.name)) is not None:
-          if kentta.name not in mask and not taydenna_maski(
-            kentta.remote_field.model._meta.concrete_model._meta,
-            mask.setdefault(kentta.name, {}),
-            _select_related,
-          ):
-            mask.pop(kentta.name)
-        elif isinstance(kentta, Lumekentta) and not kentta.automaattinen:
-          mask.setdefault(kentta.name, {})
-      return mask
-      # def taydenna_maski
-    taydenna_maski(opts, mask, self.select_related)
-
+@puukota(models.sql.query.Query)
+def _get_defer_select_mask(oletus, self, opts, mask, select_mask=None):
+  if self.model is not opts.model:
     return oletus(self, opts, mask, select_mask=select_mask)
-    # def _get_defer_select_mask
+
+  if select_mask is None:
+    select_mask = {}
+
+  for pyydetty_lumekentta in getattr(self, 'pyydetyt_lumekentat', ()):
+    _opts, _select_mask = opts, select_mask
+    for fn in pyydetty_lumekentta.split(models.sql.query.LOOKUP_SEP):
+      kentta = _opts.get_field(fn)
+      _select_mask = _select_mask.setdefault(kentta, {})
+      try:
+        _opts = kentta.remote_field.model._meta.concrete_model._meta
+      except AttributeError:
+        break
+
+  def taydenna_maski(opts, mask, select_related):
+    for kentta in opts.get_fields():
+      if kentta.is_relation \
+      and isinstance(self.select_related, dict) \
+      and (_select_related := select_related.get(kentta.name)) is not None:
+        if kentta.name not in mask and not taydenna_maski(
+          kentta.remote_field.model._meta.concrete_model._meta,
+          mask.setdefault(kentta.name, {}),
+          _select_related,
+        ):
+          mask.pop(kentta.name)
+      elif isinstance(kentta, Lumekentta) and not kentta.automaattinen:
+        mask.setdefault(kentta.name, {})
+    return mask
+    # def taydenna_maski
+  taydenna_maski(opts, mask, self.select_related)
+
+  return oletus(self, opts, mask, select_mask=select_mask)
+  # def _get_defer_select_mask
 
 
 __get_deferred_fields_ohita = False
