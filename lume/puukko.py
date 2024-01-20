@@ -2,6 +2,7 @@
 
 # pylint: disable=invalid-name, protected-access, unused-argument
 
+from contextlib import contextmanager
 import functools
 import itertools
 
@@ -17,7 +18,7 @@ def puukota(moduuli, koriste=None, kopioi=None):
   Korvaa moduulissa olevan metodin tai lisää uuden (`kopioi`).
   '''
   def puukko(funktio):
-    toteutus = getattr(moduuli, kopioi or funktio.__name__, None)
+    toteutus = getattr(moduuli, kopioi or funktio.__name__)
     def uusi_toteutus(*args, **kwargs):
       return funktio(toteutus, *args, **kwargs)
     setattr(
@@ -178,12 +179,16 @@ def _get_defer_select_mask(oletus, self, opts, mask, select_mask=None):
   # def _get_defer_select_mask
 
 
+__get_deferred_fields_ohita = False
 @puukota(models.Model)
 def get_deferred_fields(oletus, self):
   '''
   Älä sisällytä lumekenttiä malli-olion `get_deferred_fields()`-paluuarvoon.
   Tätä joukkoa kysytään mallin tallentamisen ja kannasta lataamisen yhteydessä.
   '''
+  global __get_deferred_fields_ohita
+  if __get_deferred_fields_ohita:
+    return oletus(self)
   return {
     kentta for kentta in oletus(self)
     if not isinstance(self._meta.get_field(kentta), Lumekentta)
@@ -197,10 +202,45 @@ def refresh_from_db(oletus, self, **kwargs):
   Tyhjennä mahdolliset lumekentille aiemmin lasketut arvot;
   suorita sitten tavanomainen kantakysely.
   '''
+  global __get_deferred_fields_ohita
   data = self.__dict__
   for kentta in self._meta.concrete_fields:
     if isinstance(kentta, Lumekentta):
       data.pop(kentta.name, None)
       data.pop(kentta.attname, None)
-  return oletus(self, **kwargs)
+  if __get_deferred_fields_ohita:
+    return oletus(self, **kwargs)
+  __get_deferred_fields_ohita = True
+  paluu = oletus(self, **kwargs)
+  __get_deferred_fields_ohita = False
+  return paluu
   # def refresh_from_db
+
+
+@contextmanager
+def _ohita_lumekentat():
+  assert not hasattr(Options, 'local_fields')
+  def local_fields(self):
+    _local_fields = self.__dict__['local_fields']
+    return type(_local_fields)(
+      f for f in _local_fields
+      if not isinstance(f, Lumekentta)
+    )
+  Options.local_fields = property(local_fields)
+  try:
+    yield
+  finally:
+    del Options.local_fields
+
+
+@puukota(models.Model, koriste=classmethod)
+def _check_field_name_clashes(oletus, cls):
+  with _ohita_lumekentat():
+    return oletus.__func__(cls)
+  # def _check_field_name_clashes
+
+
+@puukota(models.Model, koriste=classmethod)
+def _check_model(oletus, cls):
+  with _ohita_lumekentat():
+    return oletus.__func__(cls)

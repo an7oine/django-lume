@@ -2,7 +2,7 @@
 
 import functools
 
-from django import VERSION as django_versio
+from django.conf import settings
 from django.db import models
 from django.utils.functional import cached_property, classproperty
 
@@ -97,7 +97,14 @@ class Lumekentta(models.fields.Field):
     - laskentafunktio on määritelty; ja
     - laskentafunktio palauttaa muun arvon kuin EI_ASETETTU.
 
-    Muuten kysytään kenttää erikseen kannasta.
+    Muuten kysytään kenttää erikseen kannasta, mikäli rivi on olemassaoleva.
+    Tällöin sovelletaan `LUME_PAIKALLINEN_LASKENTA`-asetusparametriä:
+    - "raise": nostetaan poikkeus
+    - "print": tulostetaan tieto
+    - "breakpoint": keskeytetään suoritus.
+
+    Uudelle riville arvona palautuu `None` silloin, kun paikallista
+    laskentafunktiota ei ole määritelty.
 
     Parametrillä `select_related=True` palautetaan kokonainen, viitattu
     (M2O tai O2O) rivi kannasta.
@@ -111,6 +118,10 @@ class Lumekentta(models.fields.Field):
         return getattr(arvo, 'pk', arvo)
       # if callable
 
+    # Ohitetaan tarpeeton kysely silloin, kun rivi on uusi.
+    if rivi.pk is None:
+      return None
+
     # Kysytään erikseen kannasta.
     # Vrt. `django.db.models.Model.refresh_from_db`.
     qs = rivi.__class__._base_manager.db_manager(
@@ -119,6 +130,22 @@ class Lumekentta(models.fields.Field):
     # Ei toimi toistaiseksi.
     #if select_related:
     #  qs = qs.select_related(self.name)
+    if hasattr(settings, 'CONFIG'):
+      if (paikallinen := settings.CONFIG(
+        'LUME_PAIKALLINEN_LASKENTA',
+        default=None
+      )) == 'raise':
+        raise RuntimeError(
+          f'Kysytään lumekenttä erikseen:'
+          f' {self.model._meta.label}.{self.name}'
+        )
+      elif paikallinen == 'print':
+        print(
+          f'Kysytään lumekenttä erikseen:'
+          f' {self.model._meta.label}.{self.name}'
+        )
+      elif paikallinen == 'breakpoint':
+        breakpoint()
     try:
       #return getattr(qs.get(), self.name if select_related else self.attname)
       return getattr(qs.get(), self.attname)
