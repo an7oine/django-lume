@@ -15,6 +15,9 @@ EI_ASETETTU = object()
 
 class Lumekentta(models.fields.Field):
 
+  # Django 5+: generoitu kenttä, joka ohitetaan tallennettaessa.
+  generated = True
+
   @classproperty
   def forward_related_accessor_class(cls):
     # pylint: disable=no-self-argument, invalid-name, no-member
@@ -164,14 +167,17 @@ class Lumekentta(models.fields.Field):
     return tuple()
     # def get_joining_columns
 
+  def get_joining_fields(self, reverse_join=False):
+    ''' Ohita normaali JOIN-ehto (`a`.`id` = `b`.`a_id`) '''
+    # pylint: disable=unused-argument
+    return tuple()
+    # def get_joining_columns
+
   def get_extra_restriction(self, alias, related_alias):
     '''
     Luo JOIN-ehto muotoa (`a`.`id` = (SELECT ... from `b`)).
 
     Tätä kutsutaan vain `ForeignObject`-tyyppiselle kentälle.
-
-    Huomaa erilliset kutsukäytännöt (parametrien lukumäärä)
-    Django-versioilla 3.2 / 4.0.
     '''
     # pylint: disable=unused-argument, no-member
     rhs_field = self.related_fields[0][1]
@@ -181,14 +187,5 @@ class Lumekentta(models.fields.Field):
       field.get_col(alias),
     )
     # def get_extra_restriction
-
-  if django_versio < (4, 0):
-    # pylint: disable=function-redefined, no-member, unused-argument
-    # Hyväksytään aiemmin käytössä ollut `where_class`-parametri.
-    @functools.wraps(get_extra_restriction)
-    def get_extra_restriction(self, where_class, alias, related_alias):
-      return __class__.get_extra_restriction.__wrapped__(
-        self, alias, related_alias
-      )
 
   # class Lumekentta
