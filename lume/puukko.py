@@ -162,7 +162,11 @@ def _get_defer_select_mask(oletus, self, opts, mask, select_mask=None):
   if select_mask is None:
     select_mask = {}
 
+  field_names, defer = self.deferred_loading
+
   for pyydetty_lumekentta in getattr(self, 'pyydetyt_lumekentat', ()):
+    if defer and pyydetty_lumekentta in field_names:
+      continue
     _opts, _select_mask = opts, select_mask
     for fn in pyydetty_lumekentta.split(models.sql.query.LOOKUP_SEP):
       kentta = _opts.get_field(fn)
