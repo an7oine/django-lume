@@ -188,6 +188,7 @@ class Lumekentta(models.fields.Field):
     return Lumesarake(self.model._meta.db_table, self)
     # def cached_col
 
+  # Poistuu Django 6.0:ssa.
   def get_joining_columns(self, reverse_join=False):
     ''' Ohita normaali JOIN-ehto (`a`.`id` = `b`.`a_id`) '''
     # pylint: disable=unused-argument
