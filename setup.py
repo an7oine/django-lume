@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(
-  setup_requires='git-versiointi>=1.6rc4',
+  setup_requires='git-versiointi',
   name='django-lume',
   description='Django-tuki lume- eli näennäiskentille',
   url='https://github.com/an7oine/django-lume.git',

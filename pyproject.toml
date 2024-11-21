@@ -1,3 +1,2 @@
 [build-system]
-requires = ["git-versiointi>=1.6rc4", "setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["git-versiointi", "setuptools>=42", "wheel"]
