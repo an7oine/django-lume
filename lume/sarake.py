@@ -22,7 +22,7 @@ class Lumesarake(models.expressions.Col):
             pk=models.expressions.RawSQL(
               '%s.%s' % (
                 compiler.quote_name_unless_alias(join.table_alias),
-                connection.ops.quote_name(self.target.model._meta.pk.attname),
+                connection.ops.quote_name(self.target.model._meta.pk.get_attname()),
               ), ()
             ),
           ).values(**{

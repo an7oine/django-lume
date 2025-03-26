@@ -131,7 +131,7 @@ class Lumekentta(models.fields.Field):
     # Vrt. `django.db.models.Model.refresh_from_db`.
     qs = rivi.__class__._base_manager.db_manager(
       None, hints={'instance': rivi}
-    ).filter(pk=rivi.pk).only(self.attname)
+    ).filter(pk=rivi.pk).only(self.get_attname())
     # Ei toimi toistaiseksi.
     #if select_related:
     #  qs = qs.select_related(self.name)
@@ -152,8 +152,8 @@ class Lumekentta(models.fields.Field):
       elif paikallinen == 'breakpoint':
         breakpoint()
     try:
-      #return getattr(qs.get(), self.name if select_related else self.attname)
-      return getattr(qs.get(), self.attname)
+      #return getattr(qs.get(), self.name if select_related else self.get_attname())
+      return getattr(qs.get(), self.get_attname())
     except qs.model.DoesNotExist:
       return None
     # def laske_paikallisesti

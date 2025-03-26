@@ -15,7 +15,7 @@ class Lumemaare(models.query_utils.DeferredAttribute):
     if instance is None:
       return self
     data = instance.__dict__
-    field_name = self.field.attname
+    field_name = self.field.get_attname()
     if data.get(field_name, self) is self:
       val = self._check_parent_chain(instance)
       if val is None:
@@ -36,10 +36,10 @@ class Lumemaare(models.query_utils.DeferredAttribute):
     if instance is None or value is self.field.default:
       return
     data = instance.__dict__
-    field_name = self.field.attname
+    field_name = self.field.get_attname()
 
     # Uusi rivi: asetetaan paikallisesti ja lisätään dataan.
-    if not data.get(instance._meta.pk.attname):
+    if not data.get(instance._meta.pk.get_attname()):
       self.field.aseta_paikallisesti(instance, value)
       data[field_name] = value
 

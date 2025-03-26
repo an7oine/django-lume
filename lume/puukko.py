@@ -207,7 +207,7 @@ def refresh_from_db(oletus, self, **kwargs):
   for kentta in self._meta.concrete_fields:
     if isinstance(kentta, Lumekentta):
       data.pop(kentta.name, None)
-      data.pop(kentta.attname, None)
+      data.pop(kentta.get_attname(), None)
   if __get_deferred_fields_ohita:
     return oletus(self, **kwargs)
   __get_deferred_fields_ohita = True
