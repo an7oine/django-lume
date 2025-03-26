@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import functools
+from inspect import signature
 
 from django.conf import settings
 from django.db import models
@@ -84,7 +85,11 @@ class Lumekentta(models.fields.Field):
   @property
   def kysely(self):
     ''' Hae kyselylauseke (joko lambda tai suora arvo) '''
-    return self._kysely() if callable(self._kysely) else self._kysely
+    if not callable(self._kysely):
+      return self._kysely
+    elif signature(self._kysely).parameters:
+      return self._kysely(kentta=self)
+    return self._kysely()
     # def kysely
   @kysely.setter
   def kysely(self, kysely):
